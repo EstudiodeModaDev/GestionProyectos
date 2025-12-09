@@ -1,0 +1,143 @@
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55); /* similar a la captura */
+  backdrop-filter: blur(2px);
+}
+
+.modal__panel {
+  position: relative;
+  z-index: 1001;
+  background: var(--surface);
+  border-radius: 24px; /* similar al mockup */
+  border: 1px solid var(--bd);
+  box-shadow: var(--shadow);
+  padding: 24px 28px 22px;
+  max-width: 640px;
+  width: min(640px, 100% - 32px);
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.modal__title {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.modal__close {
+  border: none;
+  background: transparent;
+  font-size: 1.8rem;
+  line-height: 1;
+  padding: 2px 6px;
+  cursor: pointer;
+  color: var(--muted);
+  border-radius: 999px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modal__close:hover {
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--ink);
+}
+
+.modal__divider {
+  border: none;
+  border-top: 1px solid var(--bd);
+  margin: 16px 0 18px;
+}
+
+.modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal__grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field__label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.field__input {
+  border-radius: 12px;
+  border: 1px solid var(--bd);
+  background: var(--surface);
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.field__input::placeholder {
+  color: var(--muted);
+}
+
+.field__input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px rgba(79, 70, 229, 0.23);
+}
+
+/* footer botones */
+
+.modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.modal__btn-cancel {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--bd);
+  padding-inline: 22px;
+}
+
+.modal__btn-cancel:hover {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.modal__btn-primary {
+  padding-inline: 24px;
+}
+
+/* Responsive: en móvil el grid se apila */
+@media (max-width: 640px) {
+  .modal__panel {
+    width: calc(100% - 24px);
+    padding-inline: 18px;
+  }
+  .modal__grid {
+    grid-template-columns: 1fr;
+  }
+}

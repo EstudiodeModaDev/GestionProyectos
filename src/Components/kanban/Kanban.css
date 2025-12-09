@@ -1,0 +1,478 @@
+/* ============================
+   Layout general del Kanban
+   ============================ */
+
+.kb-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100vh;
+  padding: 16px 30px 24px 30px;
+  box-sizing: border-box;
+}
+
+/* ============================
+   Header del proyecto
+   ============================ */
+
+.kb-header {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding: 16px 0;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 50px;
+
+}
+
+.kb-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kb-project-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.kb-project-id {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.kb-project-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kb-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #111827;
+}
+
+.kb-pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background-color: #22c55e;
+}
+
+.kb-pill-icon {
+  font-size: 14px;
+}
+
+/* ============================
+   Toolbar de filtros
+   ============================ */
+
+.kb-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 8px rgba(15, 23, 42, 0.04);
+  width: 100%;
+  max-width: 900px;
+  box-sizing: border-box;
+}
+
+.kb-filter {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.kb-filter select {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 13px;
+  color: #374151;
+  background-color: #ffffff;
+}
+
+.kb-filter select:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 1px #4f46e5;
+}
+
+.kb-filter--search {
+  max-width: 420px;
+}
+
+.kb-filter--search input {
+  width: 100%;
+  padding: 8px 10px 8px 28px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 13px;
+  color: #111827;
+}
+
+.kb-filter--search input::placeholder {
+  color: #9ca3af;
+}
+
+.kb-filter--search input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 1px #4f46e5;
+}
+
+.kb-filter-icon {
+  position: absolute;
+  left: 8px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* Right side of toolbar */
+
+.kb-toolbar-right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Toggle "Ver terminadas" */
+
+.kb-toggle {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 6px;
+  font-size: 12px;
+  color: #374151;
+}
+
+.kb-toggle input {
+  display: none;
+}
+
+.kb-toggle-slider {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  background-color: #e5e7eb;
+  border-radius: 999px;
+  transition: background-color 0.2s ease;
+}
+
+.kb-toggle-slider::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  transition: transform 0.2s ease;
+}
+
+/* checked */
+
+.kb-toggle input:checked + .kb-toggle-slider {
+  background-color: #4f46e5;
+}
+
+.kb-toggle input:checked + .kb-toggle-slider::after {
+  transform: translateX(16px);
+}
+
+.kb-toggle-label {
+  font-weight: 500;
+}
+
+/* ============================
+   Board
+   ============================ */
+
+.kb-board {
+  display: flex;
+  gap: 16px;
+  padding-bottom: 16px;
+  overflow-x: scroll;    /* scroll horizontal */
+  overflow-y: hidden;
+  max-width: calc(100vw - 120px);
+}
+
+/* ============================
+   Columnas
+   ============================ */
+
+.kanban-column {
+  flex: 0 0 370px;
+  min-width: 370px;
+  max-width: 370px;
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+  background-color: #f4f5f7;
+  border-radius: 12px;
+  padding: 10px 8px;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.25);
+}
+
+.kb-column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px 8px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 8px;
+}
+
+.kb-column-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.kb-column-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.kb-column-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kb-column-empty {
+  font-size: 12px;
+  color: #9ca3af;
+  padding: 8px;
+  text-align: center;
+}
+
+/* ============================
+   Tarjetas de tarea
+   ============================ */
+
+.kanban-task {
+  cursor: grab;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.08);
+  border-left: 4px solid transparent;
+  border-radius: 10px;
+  padding: 16px 16px 12px 16px;
+  background-color: #ffffff;
+  max-width: 360px;
+  border: 1px solid #e5e7eb;
+}
+
+.kanban-task:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.16);
+}
+
+.kb-task--dragging {
+  opacity: 0.6;
+}
+
+/* Estados de borde */
+
+.kb-task--normal {
+  border-left-color: #9ca3af;
+}
+
+.kb-task--done {
+  border-left-color: #16a34a;
+}
+
+.kb-task--in-progress {
+  border-left-color: #eab308;
+}
+
+.kb-task--critical {
+  border-left-color: #dc2626;
+}
+
+/* Header de la tarjeta */
+
+.kb-task-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.kb-task-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.kb-task-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  color: #4f46e5;
+  margin-right: 4px;
+}
+
+.kb-task-info-btn {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  color: white;
+  cursor: pointer;
+  background: var(--muted-soft);
+  display: flex;
+  align-items: center;              
+  line-height: 1;
+}
+
+.kb-task-info-btn:hover {
+  background-color: #eef2ff;
+  color: #4f46e5;
+}
+
+/* Responsable */
+
+.kb-task-resp {
+  margin: 6px 0 0 0;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.badge-resp {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background-color: #e5e7eb;
+  color: #374151;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Footer de la tarjeta: chips + fecha */
+
+.kb-task-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 6px;
+  border-top: 1px solid #f3f4f6;
+  font-size: 11px;
+}
+
+/* Chips (bloqueada / crítica) */
+
+.chip-blocked {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background-color: #dc2626;
+  color: #ffffff;
+  margin-right: 4px;
+}
+
+/* Fecha + indicador */
+
+.kb-task-due {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background-color: #f9fafb;
+}
+
+.kb-task-due-date {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+/* Dot genérico */
+
+.due-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+/* Colores de vencimiento */
+
+.kb-due-dot--ok {
+  background-color: #10b981; /* verde */
+}
+
+.kb-due-dot--soon {
+  background-color: #f59e0b; /* amarillo */
+}
+
+.kb-due-dot--over {
+  background-color: #ef4444; /* rojo */
+}
+
+.kb-due-dot--neutral {
+  background-color: #d1d5db;
+}
+
+/* ============================
+   Responsividad
+   ============================ */
+
+@media (max-width: 1024px) {
+  .kb-toolbar {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    grid-template-rows: auto auto;
+  }
+
+  .kb-toolbar-right {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .kb-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .kb-project-status {
+    align-self: stretch;
+    justify-content: space-between;
+  }
+
+  .kanban-column {
+    min-width: 300px;
+    max-width: 300px;
+  }
+}

@@ -1,0 +1,218 @@
+/* Layout base */
+.lp-root {
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, #142b7b 0, var(--page-bg) 45%, #050814 100%);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  padding: 24px var(--page-pad);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.lp-header {
+  max-width: 1120px;
+  margin: 0 auto 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lp-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lp-logo-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--primary), color-mix(in oklab, var(--primary) 60%, var(--surface)));
+  box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 8px 18px rgba(0,0,0,.7);
+}
+
+.lp-logo-text {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-size: 0.98rem;
+}
+
+/* Main / Hero */
+.lp-main {
+  flex: 1;
+}
+
+.lp-hero {
+  max-width: 1120px;
+  margin: 0 auto 48px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: center;
+}
+
+.lp-hero-left {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Textos hero */
+.lp-title {
+  font-size: clamp(2.2rem, 3.1vw, 2.8rem);
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+
+.lp-title-highlight {
+  color: var(--primary);
+}
+
+.lp-subtitle {
+  color: var(--muted);
+  max-width: 36rem;
+  font-size: 0.98rem;
+}
+
+.lp-bullets {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.lp-bullets li::before {
+  content: "•";
+  margin-right: 6px;
+  color: var(--primary);
+}
+
+.lp-hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.lp-note {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Mockup derecha */
+.lp-hero-right {
+  display: flex;
+  justify-content: center;
+}
+
+/* Sections genéricas */
+.lp-section {
+  max-width: 1120px;
+  margin: 0 auto 40px;
+  padding: 22px 18px;
+  border-radius: var(--radius-xl);
+  background: color-mix(in oklab, var(--surface) 84%, transparent);
+  border: 1px solid rgba(15, 23, 42, .8);
+}
+
+.lp-section--alt {
+  background: linear-gradient(135deg, rgba(15, 23, 42, .9), rgba(8, 47, 73, .9));
+}
+
+.lp-section--tight {
+  padding-block: 18px;
+}
+
+.lp-section-title {
+  font-size: 1.4rem;
+  margin-bottom: 4px;
+}
+
+.lp-section-subtitle {
+  color: var(--muted);
+  font-size: 0.9rem;
+  max-width: 32rem;
+}
+
+/* Features */
+.lp-features-grid {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.lp-feature-card {
+  background: color-mix(in oklab, var(--surface-elev) 90%, transparent);
+  border-radius: var(--radius);
+  padding: 14px 12px;
+  border: 1px solid color-mix(in oklab, var(--border) 65%, transparent);
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.lp-feature-card h3 {
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+  color: var(--ink);
+}
+
+/* Footer */
+.lp-footer {
+  max-width: 1120px;
+  margin: 16px auto 0;
+  padding: 12px 4px 8px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.lp-footer-muted {
+  opacity: 0.8;
+}
+
+/* Responsivo */
+@media (max-width: 900px) {
+  .lp-header {
+    flex-wrap: wrap;
+  }
+
+  .lp-nav {
+    display: none;
+  }
+
+  .lp-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lp-hero-right {
+    order: -1;
+  }
+
+  .lp-section {
+    padding-inline: 16px;
+  }
+
+  .lp-features-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lp-about {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .lp-about-cta {
+    align-items: flex-start;
+  }
+
+  .lp-root {
+    padding-inline: 16px;
+  }
+}

@@ -1,0 +1,325 @@
+/* ====== DARK ====== */
+:root {
+  /* ===== Layout general ===== */
+  --page-bg: #f4f7f9;               /* fondo app (body) */
+  --surface: #ffffff;               /* tarjetas, tablas, modales */
+  --surface-subtle: #f9fafb;        /* headers de tabla, fondos suaves */
+  --surface-alt: #f4f5f7;           /* columnas kanban */
+  --border-subtle: #e5e7eb;
+  --border-strong: #d1d5db;
+
+  --ink: #111827;                   /* texto principal */
+  --muted: #6b7280;                 /* texto secundario */
+  --muted-soft: #9ca3af;            /* helpers, labels suaves */
+
+  /* ===== Sidebar ===== */
+  --sb-bg: #111827;                 
+  --sb-border: #374151;            
+  --sb-ink: #e5e7eb;               
+  --sb-muted: #9ca3af;
+  --sb-accent: #4f46e5; 
+  --sb-accent-soft: #312e81; 
+  --sb-shadow: 0 0 40px rgba(15, 23, 42, 0.8);
+  --sb-text: var(--sb-ink);   
+  --sb-primary: var(--primary); 
+  --sb-primary-hover: var(--primary-hover);
+  --sidebar-border: var(--sb-border);   
+  --sidebar-primary: rgba(148, 163, 253, 0.32);
+
+  --sb-width-open: 16rem;           
+  --sb-width-closed: 5rem;          
+
+  /* ===== Color primario (indigo) ===== */
+  --primary: #4f46e5;               
+  --bd: #acabc9;               
+  --primary-hover: #4338ca;         
+  --primary-soft: #e0e7ff;          
+  --primary-soft-border: #c7d2fe;
+  --primary-ink: #111827;
+
+  /* ===== Estados / alertas ===== */
+  --info: #2563eb;                  /* azul para info */
+  --info-soft: #dbeafe;
+
+  --success: #16a34a;               /* verde */
+  --success-soft: #dcfce7;
+
+  --warning: #f59e0b;               /* ámbar */
+  --warning-soft: #fef3c7;
+
+  --danger: #dc2626;                /* rojo */
+  --danger-soft: #fee2e2;
+
+  /* ===== Kanban / due date semáforo ===== */
+  --kanban-col-bg: #f4f5f7;
+  --kanban-card-bg: #ffffff;
+  --kanban-card-shadow: 0 2px 4px rgba(15, 23, 42, 0.08);
+  --kanban-card-shadow-hover: 0 8px 16px rgba(15, 23, 42, 0.16);
+
+  --due-ok: #10b981;                /* verde puntico */
+  --due-soon: #f59e0b;              /* amarillo */
+  --due-over: #ef4444;              /* rojo */
+
+  /* ===== Gantt ===== */
+  --gantt-track-bg: #f3f4f6;
+  --gantt-bar: #4f46e5;             /* barras normales */
+  --gantt-critical: #ef4444;        /* ruta crítica */
+
+  /* ===== Botones / chips ===== */
+  --btn-radius: 0.75rem;
+  --chip-radius: 999px;
+
+  --btn-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --btn-shadow-strong: 0 4px 10px rgba(15, 23, 42, 0.18);
+
+  --chip-bg-muted: #e5e7eb;         /* badge-resp */
+  --chip-ink-muted: #374151;
+
+  --chip-blocked-bg: #dc2626;       /* chip BLOQUEADA footer task */
+  --chip-blocked-ink: #ffffff;
+  --btn-ink: #ffffff;
+
+  /* ===== Cards / tablas ===== */
+  --card-radius: 0.75rem;           /* 12px */
+  --card-shadow-soft: 0 2px 4px rgba(15, 23, 42, 0.08);
+  --card-shadow-strong: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
+
+  --table-header-bg: #f3f4f6;
+  --table-row-hover: #f9fafb;
+
+  /* ===== Modales / overlay ===== */
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+  --modal-radius: 1rem;
+  --modal-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.45);
+
+  /* ===== Tipografía / spacing base ===== */
+  --font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+}
+
+:root[data-theme="light"] {
+  /* ===== Layout general ===== */
+  --page-bg: #f4f7f9;               /* fondo app (body) */
+  --surface: #ffffff;               /* tarjetas, tablas, modales */
+  --surface-subtle: #f9fafb;        /* headers de tabla, fondos suaves */
+  --surface-alt: #f4f5f7;           /* columnas kanban */
+  --border-subtle: #e5e7eb;
+  --border-strong: #d1d5db;
+
+  --ink: #111827;                   /* texto principal */
+  --muted: #6b7280;                 /* texto secundario */
+  --muted-soft: #9ca3af;            /* helpers, labels suaves */
+
+  /* ===== Sidebar ===== */
+  --sb-bg: #111827;                 /* bg-gray-900 */
+  --sb-border: #374151;             /* border gris */
+  --sb-ink: #e5e7eb;                /* texto blanco/gris claro */
+  --sb-muted: #9ca3af;
+  --sb-accent: #4f46e5;             /* iconos o pill activos */
+  --sb-accent-soft: #312e81;        /* hover / fondos */
+  --sb-shadow: 0 0 40px rgba(15, 23, 42, 0.8);
+  --sb-text: var(--sb-ink);                /* texto del sidebar */
+  --sb-primary: var(--primary);            /* botones morados */
+  --sb-primary-hover: var(--primary-hover);
+  --sidebar-border: var(--sb-border);      /* bordes header/footer/dividers */
+  --sidebar-primary: rgba(148, 163, 253, 0.32);
+
+  --sb-width-open: 16rem;           /* w-64 */
+  --sb-width-closed: 5rem;          /* w-20 */
+
+  /* ===== Color primario (indigo) ===== */
+  --primary: #4f46e5;               /* indigo-600 */
+  --primary-hover: #4338ca;         /* indigo-700 */
+  --primary-soft: #e0e7ff;          /* indigo-100 (chips, fondos) */
+  --primary-soft-border: #c7d2fe;
+  --primary-ink: #111827;
+
+  /* ===== Estados / alertas ===== */
+  --info: #2563eb;                  /* azul para info */
+  --info-soft: #dbeafe;
+
+  --success: #16a34a;               /* verde */
+  --success-soft: #dcfce7;
+
+  --warning: #f59e0b;               /* ámbar */
+  --warning-soft: #fef3c7;
+
+  --danger: #dc2626;                /* rojo */
+  --danger-soft: #fee2e2;
+
+  /* ===== Kanban / due date semáforo ===== */
+  --kanban-col-bg: #f4f5f7;
+  --kanban-card-bg: #ffffff;
+  --kanban-card-shadow: 0 2px 4px rgba(15, 23, 42, 0.08);
+  --kanban-card-shadow-hover: 0 8px 16px rgba(15, 23, 42, 0.16);
+
+  --due-ok: #10b981;                /* verde puntico */
+  --due-soon: #f59e0b;              /* amarillo */
+  --due-over: #ef4444;              /* rojo */
+
+  /* ===== Gantt ===== */
+  --gantt-track-bg: #f3f4f6;
+  --gantt-bar: #4f46e5;             /* barras normales */
+  --gantt-critical: #ef4444;        /* ruta crítica */
+
+  /* ===== Botones / chips ===== */
+  --btn-radius: 0.75rem;
+  --chip-radius: 999px;
+
+  --btn-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --btn-shadow-strong: 0 4px 10px rgba(15, 23, 42, 0.18);
+
+  --chip-bg-muted: #e5e7eb;         /* badge-resp */
+  --chip-ink-muted: #374151;
+
+  --chip-blocked-bg: #dc2626;       /* chip BLOQUEADA footer task */
+  --chip-blocked-ink: #ffffff;
+
+  /* ===== Cards / tablas ===== */
+  --card-radius: 0.75rem;           /* 12px */
+  --card-shadow-soft: 0 2px 4px rgba(15, 23, 42, 0.08);
+  --card-shadow-strong: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
+
+  --table-header-bg: #f3f4f6;
+  --table-row-hover: #f9fafb;
+
+  /* ===== Modales / overlay ===== */
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+  --modal-radius: 1rem;
+  --modal-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.45);
+
+  /* ===== Tipografía / spacing base ===== */
+  --font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+}
+
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+  color: var(--ink);
+  background: var(--page-bg);
+  color: var(--ink);
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+/* Botones genéricos */
+.btn {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem; 
+    padding-left: 1.5rem;
+    padding-right: 1.5rem; 
+    border-radius: 0.5rem; 
+    width: fit-content; 
+    font-weight: 600; 
+    color: #ffffff; 
+    background-color: var(--primary); 
+    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms; 
+    transition-duration: 150ms; 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); 
+
+}
+
+.btn--ghost {
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  margin: transparent;
+}
+
+.btn--ghost-primary{
+  color: var(--primary);
+}
+
+.btn-cancel {
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background-color: #e5e7eb;
+  color: #374151;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-cancel:hover {
+  background-color: #d1d5db;
+}

@@ -1,0 +1,387 @@
+/* Fuente base (opcional, igual que el mockup) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+.tdm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tdm-modal {
+  background: #ffffff;
+  border-radius: 0.75rem; /* 12px */
+  max-width: 960px;
+  width: 100%;
+  padding: 2rem;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.4);
+  max-height: 90vh;
+  overflow-y: auto;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #111827;
+}
+
+/* Header */
+
+.tdm-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.tdm-header-main {
+  max-width: 80%;
+}
+
+.tdm-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4f46e5;
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+.tdm-title {
+  font-size: 1.5rem;
+  line-height: 1.25;
+  font-weight: 800;
+  color: #111827;
+}
+
+.tdm-title-id {
+  color: #9ca3af;
+  font-weight: 400;
+  font-size: 0.875rem;
+}
+
+.tdm-close-btn {
+  margin-left: 1rem;
+  border: none;
+  background: transparent;
+  font-size: 2rem;
+  line-height: 1;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0;
+}
+
+.tdm-close-btn:hover {
+  color: #4b5563;
+}
+
+/* Grid layout */
+
+.tdm-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.3fr);
+  gap: 2rem;
+}
+
+.tdm-col-left,
+.tdm-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Labels y textos */
+
+.tdm-section-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.tdm-section-text {
+  font-size: 0.95rem;
+  color: #111827;
+  font-weight: 500;
+}
+
+/* Responsable */
+
+.tdm-responsable-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tdm-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: #e0e7ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4338ca;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+/* Fase chip */
+
+.tdm-phase-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.8rem;
+  border-radius: 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: #f3f4f6;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+}
+
+/* Cards comunes derechas */
+
+.tdm-card {
+  border-radius: 0.75rem;
+  padding: 1rem;
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.tdm-card-gray {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.tdm-card-blue {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.tdm-card-green {
+  background: #ecfdf3;
+  border-color: #bbf7d0;
+}
+
+/* Icon-bubble lateral en cards */
+
+.tdm-card-icon-bubble {
+  position: absolute;
+  left: -12px;
+  top: 1rem;
+  background: #ffffff;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tdm-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.tdm-icon-gray {
+  color: #9ca3af;
+}
+
+.tdm-icon-blue {
+  color: #2563eb;
+}
+
+.tdm-icon-green {
+  color: #16a34a;
+}
+
+/* Contenido interior de cards con icon-bubble */
+
+.tdm-card-inner {
+  margin-left: 1rem;
+}
+
+/* Predecesora y sucesoras */
+
+.tdm-predecessor-empty,
+.tdm-successors-empty {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #9ca3af;
+}
+
+.tdm-predecessor-item,
+.tdm-successor-item {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.tdm-predecessor-item:hover,
+.tdm-successor-item:hover {
+  background: #ffffff;
+  border-color: #e5e7eb;
+}
+
+.tdm-predecessor-title,
+.tdm-successor-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #111827;
+  text-decoration: underline;
+  text-decoration-color: #c7d2fe;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.tdm-predecessor-status,
+.tdm-successor-status {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tdm-predecessor-status-ok,
+.tdm-successor-status-ok {
+  color: #16a34a;
+}
+
+.tdm-predecessor-status-blocked,
+.tdm-successor-status-blocked {
+  color: #b91c1c;
+}
+
+/* Insumos / Entregables títulos */
+
+.tdm-card-title-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.tdm-card-title-text {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.tdm-card-title-blue {
+  color: #1d4ed8;
+}
+
+.tdm-card-title-green {
+  color: #15803d;
+}
+
+.tdm-card-body-text {
+  font-size: 0.9rem;
+}
+
+/* Footer */
+
+.tdm-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+/* Botones */
+
+.tdm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tdm-btn-secondary {
+  background: #ffffff;
+  color: #374151;
+  border-color: #d1d5db;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.tdm-btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+.tdm-btn-primary {
+  background: #4f46e5;
+  color: #ffffff;
+  box-shadow: 0 4px 8px rgba(79, 70, 229, 0.4);
+}
+
+.tdm-btn-primary:hover {
+  background: #4338ca;
+}
+
+.tdm-btn-primary:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Iconos en botones */
+
+.tdm-btn-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Pill de tarea completada */
+
+.tdm-pill-complete {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 1.25rem;
+  border-radius: 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* Impacto (lista) */
+
+.tdm-successors-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+  .tdm-modal {
+    padding: 1.5rem;
+    max-height: 95vh;
+  }
+
+  .tdm-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .tdm-header-main {
+    max-width: 100%;
+  }
+}
