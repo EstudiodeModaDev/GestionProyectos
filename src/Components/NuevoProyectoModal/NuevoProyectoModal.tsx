@@ -25,6 +25,7 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({open, onC
       const tasksCrated = await createAllTemplate(e, tareasCrear, created.Id!, new Date(created.FechaInicio));
       await loadInsumosPlantilla("Apertura tienda")
       console.log(insumos)
+      alert("Insumos cargados desde plantilla: " + insumos.length)
       await loadTareaInsumosPlantilla("Apertura tienda")
       const insumosCreated = await createAllInsumosFromTemplate(e, insumos,created.Id!)
       await createAllInsumosTareaFromTemplate(e, tareasInsumosPlantilla, insumosCreated.data)

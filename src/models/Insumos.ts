@@ -20,6 +20,7 @@ export type InsumoProyecto = {
     TipoInsumo: string //Archivo - Texto
     CategoriaInsumo: string //Entrada - Salida
     Texto: string;
+    NombreInsumo: string;
 }
 
 export type tareaInsumoProyecto = {

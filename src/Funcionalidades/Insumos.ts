@@ -1,9 +1,19 @@
+import { InsumoProyectoService } from './../services/InsumoProyecto.service';
 import React from "react";
-import type { InsumoProyecto, plantillaInsumos, plantillaTareaInsumo, tareaInsumoProyecto } from "../models/Insumos";
+import type {InsumoProyecto, plantillaInsumos, plantillaTareaInsumo, tareaInsumoProyecto } from "../models/Insumos";
+import type { TaskApertura } from "../models/AperturaTienda";
 import type { PlantillaInsumoService } from "../services/PlantillaInsumos.service";
-import type { InsumoProyectoService } from "../services/InsumoProyecto.service";
 import type { PlantillaTareaInsumoService } from "../services/PlantillaTareaInsumo.service";
 import type { TareaInsumoProyectoServicio } from "../services/TareaInsumoProyecto.service";
+import { useGraphServices } from "../graph/graphContext";
+
+export type TaskInsumoView = {
+  id: string;
+  title: string;
+  tipo: "Entrada" | "Salida";
+  texto: string;                      // <- nuevo
+  estado: "Subido" | "Pendiente";     // <- más claro
+};
 
 export function usePlantillaInsumos(insumosPlantillaSvc: PlantillaInsumoService) {
   const [insumos, setInsumos] = React.useState<plantillaInsumos[]>([]);
@@ -19,7 +29,7 @@ export function usePlantillaInsumos(insumosPlantillaSvc: PlantillaInsumoService)
   const loadInsumosPlantilla = React.useCallback(async (proceso: string) => {
     setLoading(true); setError(null);
     try {
-        alert("Trayendo los insumos")
+      console.log(proceso)
       const items = await insumosPlantillaSvc.getAll({filter: `fields/Proceso eq '${proceso}'`})
       setInsumos(items);
     } catch (e: any) {
@@ -51,7 +61,6 @@ export function useTareaPlantillaInsumo(plantillaTareaInsumo: PlantillaTareaInsu
   const loadTareaInsumosPlantilla = React.useCallback(async (proceso: string) => {
     setLoading(true); setError(null);
     try {
-        alert("Trayendo los tareainsumos")
       const items = await plantillaTareaInsumo.getAll({filter: `fields/Proceso eq '${proceso}'`})
       setInsumos(items);
     } catch (e: any) {
@@ -77,7 +86,8 @@ export function useInsumosProyecto(insumosProyectoSvc: InsumoProyectoService) {
     IdInsumo: "",
     Texto: "",
     TipoInsumo: "",
-    Title: ""
+    Title: "",
+    NombreInsumo: "",
   });
   const setField = <K extends keyof InsumoProyecto>(k: K, v: InsumoProyecto[K]) => setState((s) => ({ ...s, [k]: v }));
   
@@ -116,8 +126,7 @@ export function useInsumosProyecto(insumosProyectoSvc: InsumoProyectoService) {
   };
 
   const createAllInsumosFromTemplate = async (e: React.FormEvent, templateInsumos: plantillaInsumos[], IdProyecto: string,) => {
-    e.preventDefault();
-    alert("Creando los insumos")
+    e.preventDefault()
 
     if (!templateInsumos || templateInsumos.length === 0) {
       alert("No hay insumos definidos para esta plantilla");
@@ -134,11 +143,12 @@ export function useInsumosProyecto(insumosProyectoSvc: InsumoProyectoService) {
       for (const item of templateInsumos) {
 
         const payload: InsumoProyecto = {
-          CategoriaInsumo: "",
+          CategoriaInsumo: item.Categoria,
           IdInsumo: item.Id ?? "",
           Texto: "",
           TipoInsumo: item.Categoria,
           Title: IdProyecto,
+          NombreInsumo: item.Title,
         };
 
         
@@ -197,7 +207,6 @@ export function useTareaInsumoProyecto(tareaInsumoProyecto: TareaInsumoProyectoS
 
   const createAllInsumosTareaFromTemplate = async (e: React.FormEvent, templateInsumos: plantillaTareaInsumo[], data: any) => {
     e.preventDefault();
-    alert("Creando los tarea insumos")
 
     if (!templateInsumos || templateInsumos.length === 0) {
       alert("No hay insumos plantillaTareaInsumo definidos");
@@ -235,5 +244,91 @@ export function useTareaInsumoProyecto(tareaInsumoProyecto: TareaInsumoProyectoS
     applyRange, reloadAll, setField, loadFirstPage, createAllInsumosTareaFromTemplate, 
   };
 }
+
+export function useTaskInsumos(task: TaskApertura | null) {
+  const {insumoProyecto, tareaInsumoProyecto } = useGraphServices();
+  const [inputs, setInputs] = React.useState<TaskInsumoView[]>([]);
+  const [outputs, setOutputs] = React.useState<TaskInsumoView[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!task) return;
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // 1. Vínculos tarea-insumo
+        const links: tareaInsumoProyecto[] = await tareaInsumoProyecto.getAll({
+          filter: `fields/Title eq '${task.Codigo}'`,
+        });
+
+        if (!links.length) {
+          if (!cancelled) {
+            setInputs([]);
+            setOutputs([]);
+          }
+          return;
+        }
+
+        const insumoIds = links
+          .map((l) => l.IdInsumoProyecto)
+          .filter(Boolean);
+
+        if (!insumoIds.length) {
+          if (!cancelled) {
+            setInputs([]);
+            setOutputs([]);
+          }
+          return;
+        }
+
+        // 2. Traer los insumos del proyecto
+        const insumos: InsumoProyecto[] = await insumoProyecto.getByIds(insumoIds);
+
+        const entradas: TaskInsumoView[] = [];
+        const salidas: TaskInsumoView[] = [];
+
+        for (const ins of insumos) {
+          const texto = ins.CategoriaInsumo ?? "";
+          const view: TaskInsumoView = {
+            id: ins.Id ?? "",
+            title: ins.NombreInsumo,
+            tipo: ins.TipoInsumo as "Entrada" | "Salida",
+            texto,
+            estado: texto ? "Subido" : "Pendiente",
+          };
+
+          if (view.tipo === "Entrada") entradas.push(view);
+          else salidas.push(view);
+        }
+
+        if (!cancelled) {
+          setInputs(entradas);
+          setOutputs(salidas);
+        }
+      } catch (e: any) {
+        if (!cancelled) {
+          setError(e?.message ?? "Error cargando insumos");
+          setInputs([]);
+          setOutputs([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [task, tareaInsumoProyecto, insumoProyecto]);
+
+  return { inputs, outputs, loading, error };
+}
+
 
 

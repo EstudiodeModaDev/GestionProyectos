@@ -7,6 +7,7 @@ import { useGraphServices } from "../../graph/graphContext";
 import { useTasks } from "../../Funcionalidades/Tasks";
 import { ParseDateShow } from "../../utils/Date";
 import {TaskDetailModal} from "../DetallesTarea/DetallesTarea"
+import { useProjects } from "../../Funcionalidades/Proyectos";
 
 export type KanbanEstado = "Pendiente" | "En Proceso" | "Completada";
 
@@ -18,7 +19,6 @@ export type KanbanPhase = {
 type Props = {
   project: ProjectSP;
   responsablesMap?: Record<string, string>;
-  onShowDependencies?: (task: TaskApertura) => void;
   onCreateTask?: () => void;
   onAlert?: (msg: string) => void;
   fases: KanbanPhase[];   
@@ -26,16 +26,67 @@ type Props = {
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
-const KanbanApertura: React.FC<Props> = ({project, responsablesMap, onShowDependencies, onCreateTask, onAlert, fases}) => {
-  const { tasks} = useGraphServices();
-  const { task: rows, loadProyecTasks, estado, search, responsable, setEstado, setResponsable, setSearch, updateTaskPhase, loading} = useTasks(tasks);
+const KanbanApertura: React.FC<Props> = ({project, responsablesMap, onCreateTask, onAlert, fases}) => {
+  const { tasks, proyectos} = useGraphServices();
+  const { task: rows, estado, search, responsable, loading,
+    loadProyecTasks, setEstado, setResponsable, setSearch, updateTaskPhase, searchPredecessor, searchSuccesor, selfAssign, setComplete } = useTasks(tasks);
+  const { updatePorcentaje } = useProjects(proyectos);
   const [detalles, setDetalles] = React.useState<boolean>(false)
   const [selectedTask, setSelectedTask] = React.useState<TaskApertura | null>(null)
+  const [predesesor, setPredecesor] = React.useState<TaskApertura | null>(null)
+  const [sucessors, setSurcessors] = React.useState<TaskApertura[]>([])
 
   // cuando cambien las tareas (o el proyecto), reseteamos
   React.useEffect(() => {
     loadProyecTasks(project.Id ?? "")
   }, [tasks, project.Id, estado, search, responsable,]);
+
+  React.useEffect(() => {
+    if (!selectedTask) {
+      setPredecesor(null);
+      return;
+    }
+
+    if (!selectedTask.Dependencia) {
+      setPredecesor(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      const predecessorTask = await searchPredecessor(selectedTask.Dependencia || "");
+      const sucessorsTasks = await searchSuccesor(selectedTask.Codigo || "");
+      
+      if (!cancelled) {
+        setPredecesor(predecessorTask);
+        setSurcessors(sucessorsTasks);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTask, searchPredecessor]);
+
+  const handleAssignToMe = React.useCallback(
+  async (task: TaskApertura) => {
+    await selfAssign(task.Id!);
+    await loadProyecTasks(task.IdProyecto!);  // refresca MIS rows
+  },
+  [selfAssign, loadProyecTasks]
+  );
+
+  const handleCompleteTask = React.useCallback(
+    async (task: TaskApertura) => {
+      const data = await setComplete(task);
+      if (data.ok) {
+        await updatePorcentaje(task.IdProyecto!, data.percent);
+      }
+      await loadProyecTasks(task.IdProyecto!);  // refresca MIS rows
+    },
+    [setComplete, updatePorcentaje, loadProyecTasks]
+  );
 
   const getTaskById = React.useCallback(
     (id?: string | null) =>
@@ -103,6 +154,11 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, onShowDepend
     updateTaskPhase(id, targetPhase, projectId, )
   };
 
+  const handleClick = React.useCallback(async (task: TaskApertura) => {
+    setSelectedTask(task); 
+    setDetalles(true)
+  }, [searchPredecessor, tasks, selectedTask]);
+
   /* ========= RENDER ========= */
 
   const allResponsablesKeys = Array.from(new Set(rows.map((t) => t.CorreoResponsable).filter(Boolean)));
@@ -117,32 +173,22 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, onShowDepend
     <div className="kb-root">
       {/* HEADER PROYECTO */}
       <header className="kb-header">
-        <div className="kb-header-left">
+        <div>
           <h1 className="kb-project-title">{project.Title}</h1>
           <p className="kb-project-id">ID proyecto: {project.Id}</p>
         </div>
 
         <div className="kb-project-status">
-          <div className="kb-pill">
-            <span className="kb-pill-dot" />
-            <span>{project.Estado ?? "En curso"}</span>
-          </div>
-          <div className="kb-pill">
-            <span className="kb-pill-icon">▾</span>
-            <span>{project.fulfillment ?? 0}%</span>
-          </div>
-          <div className="kb-pill">
-            <span className="kb-pill-icon">⏱</span>
-            <span>{ParseDateShow(project.FechaInicio) ?? ""}</span>
-          </div>
+          <div className="kb-pill"><span>{project.Estado ?? "En curso"}</span></div>
+          <div className="kb-pill"><span>{project.Progreso ?? 0}%</span></div>
+          <div className="kb-pill"><span>{ParseDateShow(project.FechaInicio) ?? ""}</span></div>
         </div>
       </header>
 
       {/* TOOLBAR */}
       <section className="kb-toolbar">
-        <div className="kb-filter kb-filter--search">
-          <span className="kb-filter-icon">🔍</span>
-          <input type="text" placeholder="Buscar tarea por nombre o código…" value={search} onChange={(e) => setSearch(e.target.value)}/>
+        <div className="kb-filter--search">
+          <input type="text" placeholder="Buscar tarea por nombre o código…" value={search} onChange={(e) => setSearch(e.target.value)} className="filter-text"/>
         </div>
 
         <div className="kb-filter">
@@ -158,7 +204,7 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, onShowDepend
 
         <div className="kb-toolbar-right">
           <label className="kb-toggle">
-            <input type="checkbox" checked={estado} onChange={() => setEstado((v) => !v)}/>
+            <input type="checkbox" checked={estado} onChange={() => {setEstado((v) => !v)}}/>
             <span className="kb-toggle-slider" />
             <span className="kb-toggle-label">Ver terminadas</span>
           </label>
@@ -202,7 +248,7 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, onShowDepend
                     task.Responsable;
 
                   return (
-                    <div key={task.Id} id={String(task.Id)} className={`kanban-task ${borderClass}`} onClick={() => {setSelectedTask(task); setDetalles(true)}} draggable onDragStart={(ev) => handleDragStart(ev, task)} onDragEnd={handleDragEnd} onDragOver={handleDragOver}>
+                    <div key={task.Id} id={String(task.Id)} className={`kanban-task ${borderClass}`} onClick={() => {handleClick(task)}} draggable onDragStart={(ev) => handleDragStart(ev, task)} onDragEnd={handleDragEnd} onDragOver={handleDragOver}>
                       <div className="kb-task-header">
                         <p className="kb-task-title">
                           <span className="kb-task-id">
@@ -210,17 +256,6 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, onShowDepend
                           </span>
                           {task.Title}
                         </p>
-
-                        <button
-                          type="button"
-                          className="kb-task-info-btn"
-                          onClick={() =>
-                            onShowDependencies && onShowDependencies(task)
-                          }
-                          title="Ver dependencias"
-                        >
-                          i
-                        </button>
                       </div>
 
                       <p className="kb-task-resp">
@@ -265,11 +300,7 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, onShowDepend
         })}
       </section>
 
-      <TaskDetailModal open={detalles} task={selectedTask} phases={fases} onClose={() => setDetalles(false)} onComplete={function (taskId: string): void {
-              throw new Error("Function not implemented.");
-          } } onGoToTask={function (taskId: string, phaseId: string): void {
-              throw new Error("Function not implemented.");
-          } }/>
+      <TaskDetailModal open={detalles} task={selectedTask} phases={fases} onClose={() => setDetalles(false)} predecessor={predesesor} successors={sucessors} onGoToTask={(task: TaskApertura) => { setSelectedTask(task); } } onAssignToMe={handleAssignToMe} onCompleteTask={handleCompleteTask}/>
     </div>
   );
 };

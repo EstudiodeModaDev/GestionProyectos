@@ -8,6 +8,7 @@ import { fetchHolidays } from "./Holidays";
 import { toGraphDateTime } from "../utils/Date";
 import type { ProjectSP } from "../models/Projects";
 import type { GetAllOpts } from "../models/commons";
+import { useAuth } from "../auth/authProvider";
 
 export function useTasks(tasksSvc: TareasProyectosService) {
   const [onGoingTasks, setOnGoingTasks] = React.useState<TaskApertura[]>([]);
@@ -33,6 +34,7 @@ export function useTasks(tasksSvc: TareasProyectosService) {
   });
   const [holidays, setHolidays] = React.useState<Holiday[]>([])
   const setField = <K extends keyof TaskApertura>(k: K, v: TaskApertura[K]) => setState((s) => ({ ...s, [k]: v }));
+  const {account} = useAuth();
 
 
   React.useEffect(() => {
@@ -135,7 +137,7 @@ export function useTasks(tasksSvc: TareasProyectosService) {
           TipoTarea: item.TipoTarea,
           Title: item.Title,
           FechaResolucion: toGraphDateTime(fechaSolucion)!,
-          Estado: "",
+          Estado: "Incompleta",
           FechaCierre: null
         };
 
@@ -160,14 +162,14 @@ export function useTasks(tasksSvc: TareasProyectosService) {
     filters.push(`fields/IdProyecto eq '${IdProyecto}'`);
 
     if (search) {
-      filters.push(`startswith(fields/Title '${search}')`);
+      filters.push(`startswith(fields/Title, '${search}')`);
     } 
 
     if (responsable) {
-      filters.push(`(startswith(fields/Responsable '${responsable}') or startswith(fields/CorreoResponsable '${responsable}'))`);
+      filters.push(`(startswith(fields/Responsable, '${responsable}') or startswith(fields/CorreoResponsable, '${responsable}'))`);
     } 
 
-    if (!estado) {
+    if (estado === false) {
       filters.push(`fields/Estado eq 'Incompleta'`);
     }
 
@@ -191,7 +193,7 @@ export function useTasks(tasksSvc: TareasProyectosService) {
     } finally {
       setLoading(false);
     }
-  }, [tasksSvc]);
+  }, [tasksSvc, buildFilter]);
 
   const updateTaskPhase = React.useCallback(async (IdTask: string, newPhase: string, IdProyecto: string) => {
     setLoading(true); setError(null);
@@ -206,10 +208,108 @@ export function useTasks(tasksSvc: TareasProyectosService) {
     }
   }, [tasksSvc]);
 
+  const searchPredecessor = React.useCallback(async (dependenciaId: string | null): Promise<TaskApertura | null> => {
+      if (!dependenciaId) return null;
+      setLoading(true);
+      setError(null);
+      try {
+        const items = await tasksSvc.getAll({filter: `fields/Codigo eq '${dependenciaId}'`,  top: 1,});
+        return items[0] ?? null;
+      } catch (e: any) {
+        setError(e?.message ?? "Error cargando predecesor");
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [tasksSvc]
+  );
 
+  const searchSuccesor = React.useCallback(async (taskId: string | null): Promise<TaskApertura[]> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const items = await tasksSvc.getAll({filter: `fields/Dependencia eq '${taskId}'`,});
+        return items
+      } catch (e: any) {
+        setError(e?.message ?? "Error cargando predecesor");
+        return [];
+      } finally {
+        setLoading(false);
+      }
+    },
+    [tasksSvc]
+  );
+
+  const selfAssign = React.useCallback(async (taskId: string | null) => {
+      setLoading(true);
+      setError(null);
+      try {
+        await tasksSvc.update(taskId!, {CorreoResponsable: account?.username ?? "", Responsable: account?.name ?? ""});
+        alert("Te has asignado la tarea correctamente");
+      } catch (e: any) {
+        setError(e?.message ?? "Error asignando tarea");
+        return [];
+      } finally {
+        setLoading(false);
+      }
+    },
+    [tasksSvc]
+  );
+
+  const unassignTasks = React.useCallback(async (projectId: string | null) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const cantidad = (await tasksSvc.getAll({filter: `fields/IdProyecto eq '${projectId}' and fields/CorreoResponsable eq ''`, top: 20000})).lenght
+        return cantidad
+      } catch (e: any) {
+        setError(e?.message ?? "Error asignando tarea");
+        return [];
+      } finally {
+        setLoading(false);
+      }
+    },
+    [tasksSvc]
+  );
+
+  const setComplete = React.useCallback(async (task: TaskApertura): Promise<{ok: boolean, percent:number}> => {
+      setLoading(true);
+      setError(null);
+      try {
+        if(task.Responsable !== account?.name!){
+          alert("No puedes completar una tarea que no te has asignado");
+          return {
+            ok: false,
+            percent: 0
+          }
+        } else {
+          await tasksSvc.update(task.Id!, {Estado: "Completada", FechaCierre: toGraphDateTime(new Date())});
+          const finishedTasks = (await tasksSvc.getAll({filter: `fields/IdProyecto eq '${task.IdProyecto}' and fields/Estado eq 'Completada'`, top: 20000})).length
+          const totalTasks = (await tasksSvc.getAll({filter: `fields/IdProyecto eq '${task.IdProyecto}'`, top: 20000})).length
+          const percent = Math.round((finishedTasks / totalTasks) * 100)
+          alert("Tarea completada correctamente");
+          return {
+            ok: true,
+            percent
+          }
+        }
+        
+      } catch (e: any) {
+        setError(e?.message ?? "Error asignando tarea");
+        return {
+          ok: false,
+          percent: 0
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [tasksSvc]
+  );
 
   return {
     loading, error, state, onGoingTasks, task, estado, search, responsable, 
-    loadTasksOnGoing, setField, createAllTemplate, loadProyecTasks, setResponsable, setSearch, setEstado, updateTaskPhase
+    loadTasksOnGoing, setField, createAllTemplate, loadProyecTasks, setResponsable, setSearch, setEstado, updateTaskPhase, searchPredecessor, searchSuccesor, selfAssign, unassignTasks, setComplete
   };
 }

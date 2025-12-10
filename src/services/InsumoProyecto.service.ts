@@ -33,7 +33,8 @@ export class InsumoProyectoService {
         CategoriaInsumo: f.CategoriaInsumo,
         IdInsumo: f.IdInsumo, 
         Texto: f.Texto,
-        TipoInsumo: f.TipoInsumo
+        TipoInsumo: f.TipoInsumo,
+        NombreInsumo: f.NombreInsumo
     };
   }
   
@@ -160,6 +161,37 @@ export class InsumoProyectoService {
       }
       throw e;
     }
+  }
+
+    async getByIds(ids: string[]): Promise<InsumoProyecto[]> {
+    if (!ids || ids.length === 0) return [];
+
+    // Limpia ids: quita null/undefined/"" y duplicados
+    const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+
+    // Hacemos las llamadas en paralelo
+    const results = await Promise.all(
+      uniqueIds.map(async (id) => {
+        try {
+          const item = await this.get(id);
+          return item;
+        } catch (e) {
+          console.error("[InsumoProyectoService.getByIds] Error con id", id, e);
+          return null;
+        }
+      })
+    );
+
+    // Mapa por id para reconstruir en el mismo orden que ids original
+    const byId = new Map(
+      results.filter((r): r is InsumoProyecto => r !== null).map((item) => [item.Id, item])
+    );
+
+    // Devuelve en el mismo orden del array de entrada
+    return ids
+      .filter(Boolean)
+      .map((id) => byId.get(id)!)
+      .filter((item): item is InsumoProyecto => !!item);
   }
 
 }

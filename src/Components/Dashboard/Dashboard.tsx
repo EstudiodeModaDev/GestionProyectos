@@ -51,6 +51,21 @@ export const Dashboard: React.FC<DashboardProps> = ({onOpenProjectKanban, onShow
     [activeProjects]
   );
 
+  const unassignedByProject = React.useMemo(() => {
+    const map: Record<string, number> = {};
+
+    onGoingTasks.forEach((t) => {
+      const projectId = t.IdProyecto ?? "";
+      const isUnassigned = !t.CorreoResponsable; // y si quieres solo incompletas:
+      // const isUnassigned = !t.CorreoResponsable && t.Estado !== "Completada";
+
+      if (!projectId) return;
+      map[projectId] = (map[projectId] ?? 0) + (isUnassigned ? 1 : 0);
+    });
+
+    return map;
+  }, [onGoingTasks]);
+
   React.useEffect(() => {
     if (activeProjects.length > 0) {
       loadTasksOnGoing(activeProjects);
@@ -162,6 +177,7 @@ export const Dashboard: React.FC<DashboardProps> = ({onOpenProjectKanban, onShow
             <button type="button" onClick={() => onOpenProjectKanban(p)} style={{ all: "unset", display: "block", cursor: "pointer" }}>
               <h3 className="card__title">{p.Title}</h3>
               <p className="card__meta">Líder: {p.Lider} | Entrega: {ParseDateShow(p.Fechadelanzamiento)}</p>
+              <p className="card__meta">Tareas sin asignar: {unassignedByProject[p.Id ?? ""] ?? 0}</p>
 
               <div className="card__progress-label">
                 <span>Progreso</span>

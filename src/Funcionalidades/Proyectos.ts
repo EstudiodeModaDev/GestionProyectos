@@ -37,6 +37,20 @@ export function useProjects(Proyectos: ProyectosServices) {
     }
   }, [Proyectos]);
 
+  const cleanState = React.useCallback(() => {
+    setState({
+      Descripcion: "",
+      Estado: "",
+      Title: "",
+      CorreoLider: account?.username ?? "",
+      Fechadelanzamiento: "",
+      FechaInicio: today!,
+      fulfillment: 0,
+      Lider: account?.name ?? "",
+      Progreso: "0",
+    });
+  }, [Proyectos]);
+
   React.useEffect(() => {
     loadFirstPage();
   }, [loadFirstPage, search]);
@@ -67,6 +81,7 @@ export function useProjects(Proyectos: ProyectosServices) {
       return created
     } finally {
         setLoading(false);
+        cleanState();
       }
   };
 
@@ -96,9 +111,18 @@ export function useProjects(Proyectos: ProyectosServices) {
       }
   };
 
+  const updatePorcentaje = async (Id: string, porcentaje: number) => {
+    setLoading(true);
+    try {
+      await Proyectos.update(Id, {Progreso: porcentaje.toString()});
+    } finally {
+        setLoading(false);
+    }
+  };
+
   return {
     rows, loading, error, search, state,
-    applyRange, reloadAll, setSearch, setField, handleSubmit, loadFirstPage, changeName, archiveProject
+    applyRange, reloadAll, setSearch, setField, handleSubmit, loadFirstPage, changeName, archiveProject, updatePorcentaje
   };
 }
 
