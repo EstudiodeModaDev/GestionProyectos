@@ -1,69 +1,69 @@
-/* Layout base */
+/* ===================== Landing Page ===================== */
+
 .lp-root {
   min-height: 100vh;
-  background: radial-gradient(circle at top left, #142b7b 0, var(--page-bg) 45%, #050814 100%);
+  background: var(--page-bg);
   color: var(--ink);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-  padding: 24px var(--page-pad);
+  font-family: var(--font-family);
   display: flex;
   flex-direction: column;
 }
 
-/* Header */
+/* ========== Header ========== */
+
 .lp-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  padding: var(--space-4) var(--space-8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-logo h1 {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--primary-ink);
+}
+
+/* ========== Main / Hero ========== */
+
+.lp-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Hero layout */
+.lp-hero {
   max-width: 1120px;
-  margin: 0 auto 32px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-8);
 }
 
-.lp-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.lp-logo-mark {
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--primary), color-mix(in oklab, var(--primary) 60%, var(--surface)));
-  box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 8px 18px rgba(0,0,0,.7);
-}
-
-.lp-logo-text {
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  font-size: 0.98rem;
-}
-
-/* Main / Hero */
-.lp-main {
+.lp-hero-left,
+.lp-hero-rigt {
   flex: 1;
 }
 
-.lp-hero {
-  max-width: 1120px;
-  margin: 0 auto 48px;
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 32px;
-  align-items: center;
-}
-
-.lp-hero-left {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-/* Textos hero */
+/* Left side (copy) */
 .lp-title {
-  font-size: clamp(2.2rem, 3.1vw, 2.8rem);
+  font-size: clamp(var(--text-2xl), 3vw, var(--text-3xl));
   line-height: 1.1;
-  letter-spacing: 0.01em;
+  margin: 0 0 var(--space-3);
+  color: var(--ink);
 }
 
 .lp-title-highlight {
@@ -71,148 +71,201 @@
 }
 
 .lp-subtitle {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-lg);
   color: var(--muted);
-  max-width: 36rem;
-  font-size: 0.98rem;
 }
 
 .lp-bullets {
-  list-style: none;
+  margin: 0 0 var(--space-4);
   padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 0.9rem;
+  list-style: none;
+}
+
+.lp-bullets li {
+  position: relative;
+  padding-left: 1.5rem;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-base);
+  color: var(--ink);
 }
 
 .lp-bullets li::before {
-  content: "•";
-  margin-right: 6px;
-  color: var(--primary);
-}
-
-.lp-hero-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 4px;
+  content: "";
+  position: absolute;
+  left: 0.35rem;
+  top: 0.5rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-soft);
 }
 
 .lp-note {
-  font-size: 0.8rem;
-  color: var(--muted);
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-sm);
+  color: var(--muted-soft);
 }
 
-/* Mockup derecha */
-.lp-hero-right {
+/* Right side (card con botón) */
+.lp-hero-rigt {
   display: flex;
   justify-content: center;
 }
 
-/* Sections genéricas */
+.lp-hero-rigt .lp-login-card {
+  width: 100%;
+}
+
+
+/* ========== Sección de features ========== */
+
 .lp-section {
   max-width: 1120px;
-  margin: 0 auto 40px;
-  padding: 22px 18px;
-  border-radius: var(--radius-xl);
-  background: color-mix(in oklab, var(--surface) 84%, transparent);
-  border: 1px solid rgba(15, 23, 42, .8);
-}
-
-.lp-section--alt {
-  background: linear-gradient(135deg, rgba(15, 23, 42, .9), rgba(8, 47, 73, .9));
-}
-
-.lp-section--tight {
-  padding-block: 18px;
+  margin: 0 auto var(--space-8);
+  padding: 0 var(--space-4) var(--space-8);
 }
 
 .lp-section-title {
-  font-size: 1.4rem;
-  margin-bottom: 4px;
-}
-
-.lp-section-subtitle {
-  color: var(--muted);
-  font-size: 0.9rem;
-  max-width: 32rem;
-}
-
-/* Features */
-.lp-features-grid {
-  margin-top: 18px;
-  display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.lp-feature-card {
-  background: color-mix(in oklab, var(--surface-elev) 90%, transparent);
-  border-radius: var(--radius);
-  padding: 14px 12px;
-  border: 1px solid color-mix(in oklab, var(--border) 65%, transparent);
-  font-size: 0.88rem;
-  color: var(--muted);
-}
-
-.lp-feature-card h3 {
-  font-size: 0.95rem;
-  margin-bottom: 4px;
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  text-align: center;
   color: var(--ink);
 }
 
-/* Footer */
-.lp-footer {
-  max-width: 1120px;
-  margin: 16px auto 0;
-  padding: 12px 4px 8px;
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.78rem;
+.lp-section-subtitle {
+  margin: 0 0 var(--space-6);
+  text-align: center;
+  font-size: var(--text-base);
   color: var(--muted);
 }
 
-.lp-footer-muted {
-  opacity: 0.8;
+/* Grid de features */
+.lp-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
 }
 
-/* Responsivo */
+.lp-feature-card {
+  background: var(--surface);
+  border-radius: var(--card-radius);
+  padding: var(--space-6);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--card-shadow-soft);
+}
+
+.lp-feature-card h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.lp-feature-card p {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+/* ========== Footer ========== */
+
+.lp-footer {
+  border-top: 1px solid var(--border-subtle);
+  padding: var(--space-4) var(--space-8);
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--muted-soft);
+  background: var(--surface);
+}
+
+/* ========== Botón reutilizable (usa tus tokens) ========== */
+
+/* Asumiendo que ya usas .btn en otras partes, esto es seguro y usa tokens */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border-radius: var(--btn-radius);
+  font-family: inherit;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: var(--btn-shadow);
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+/* Variante primaria que casa con el resto de la app */
+.btn-primary-final {
+  background: var(--primary);
+  color: var(--btn-ink);
+}
+
+.btn-primary-final:hover {
+  background: var(--primary-hover);
+  box-shadow: var(--btn-shadow-strong);
+  transform: translateY(-1px);
+}
+
+.btn-xs {
+  padding: 0.6rem 1.2rem;
+  font-size: var(--text-sm);
+}
+
+/* Hace que ocupe todo el ancho posible */
+.btn-block {
+  width: 100%;
+}
+
+/* ========== Responsiveness ========== */
+
 @media (max-width: 900px) {
   .lp-header {
-    flex-wrap: wrap;
-  }
-
-  .lp-nav {
-    display: none;
+    padding-inline: var(--space-4);
   }
 
   .lp-hero {
-    grid-template-columns: minmax(0, 1fr);
+    flex-direction: column-reverse;
+    align-items: stretch;
+    text-align: left;
   }
 
-  .lp-hero-right {
-    order: -1;
+  .lp-hero-left {
+    text-align: left;
   }
 
-  .lp-section {
-    padding-inline: 16px;
+  .lp-hero-rigt {
+    max-width: 100%;
   }
 
   .lp-features-grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .lp-header {
+    padding-inline: var(--space-3);
   }
 
-  .lp-about {
-    flex-direction: column;
-    align-items: flex-start;
+  .lp-hero {
+    padding-inline: var(--space-3);
   }
 
-  .lp-about-cta {
-    align-items: flex-start;
+  .lp-section {
+    padding-inline: var(--space-3);
   }
 
-  .lp-root {
-    padding-inline: 16px;
+  .lp-features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-title {
+    font-size: var(--text-2xl);
   }
 }

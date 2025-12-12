@@ -138,24 +138,10 @@ const Desviation: React.FC<Props> = ({ project, onBack }) => {
 
       {/* KPIs */}
       <div className="pca-kpi-grid">
-        <div
-          className={
-            "pca-kpi-card " +
-            (project.fulfillment < 100
-              ? "pca-kpi-border-red"
-              : "pca-kpi-border-green")
-          }
-        >
+        <div className={"pca-kpi-card " + (Number(project.Progreso) < 100 ? "pca-kpi-border-red" : "pca-kpi-border-green")}>
           <p className="pca-kpi-label">Cumplimiento global</p>
-          <p
-            className={
-              "pca-kpi-value " +
-              (project.fulfillment < 100
-                ? "pca-kpi-value-red"
-                : "pca-kpi-value-green")
-            }
-          >
-            {project.fulfillment}%
+          <p className={"pca-kpi-value " + (Number(project.Progreso) < 100 ? "pca-kpi-value-red" : "pca-kpi-value-green")}>
+            {project.Progreso}%
           </p>
         </div>
 
@@ -193,16 +179,8 @@ const Desviation: React.FC<Props> = ({ project, onBack }) => {
             </thead>
             <tbody>
               {analysisRows.map((row) => (
-                <tr key={row.task.Id} className={row.isHeavyDeviation ? "pca-row pca-row-critical" : "pca-row"}
-                >
-                  <td
-                    className={
-                      "pca-cell-text " +
-                      (row.isCritical
-                        ? "pca-cell-critical"
-                        : "pca-cell-normal")
-                    }
-                  >
+                <tr key={row.task.Id} className={row.isHeavyDeviation ? "pca-row pca-row-critical" : "pca-row"}>
+                  <td className={"pca-cell-text " + (row.isCritical ? "pca-cell-critical" : "pca-cell-normal")}>
                     {row.task.Title}
                   </td>
                   <td className="pca-cell-text-muted">
@@ -213,10 +191,7 @@ const Desviation: React.FC<Props> = ({ project, onBack }) => {
                   </td>
                   <td className={row.deviationClass}>{row.deviation}</td>
                   <td>
-                    <span
-                      className={
-                        "pca-status-chip " +
-                        (row.task.Estado === "Completa" ? "pca-status-ok" : "pca-status-bad")}>
+                    <span className={"pca-status-chip " + (row.task.Estado === "Completa" ? "pca-status-ok" : "pca-status-bad")}>
                       {row.task.Estado}
                     </span>
                   </td>

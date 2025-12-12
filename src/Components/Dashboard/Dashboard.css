@@ -77,7 +77,7 @@
 
 .card {
   background: var(--surface);
-  border-radius: 30px;
+  border-radius: 15px;
   border: 1px solid var(--bd);
   box-shadow: var(--shadow);
   padding: 16px 18px;
@@ -94,7 +94,7 @@
 }
 
 .card--accent {
-  border-left: 3px solid var(--primary);
+  border-left: 5px solid var(--primary);
 }
 
 .card__title {

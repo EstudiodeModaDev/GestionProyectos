@@ -1,0 +1,142 @@
+/* ============================
+   Módulo Asignación de Recursos
+   ============================ */
+
+.resource-allocation {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color: #111827; /* gris muy oscuro */
+}
+
+/* Header */
+.resource-allocation__header {
+  margin-bottom: 2rem;
+}
+
+.resource-allocation__title {
+  font-size: 1.875rem; /* text-3xl */
+  line-height: 2.25rem;
+  font-weight: 700; /* font-bold */
+  color: #1f2937; /* text-gray-800 */
+  margin: 0 0 0.75rem 0; /* mb-3 */
+}
+
+.resource-allocation__subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #4b5563; /* text-gray-600 */
+}
+
+/* Tarjeta Tabla */
+.resource-allocation__card {
+  background-color: #ffffff; /* bg-white */
+  border-radius: 0.75rem;    /* rounded-xl */
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.15); /* shadow-lg */
+  overflow: hidden;          /* overflow-hidden */
+  border: 1px solid #e5e7eb; /* border-gray-200 */
+}
+
+/* Tabla */
+.resource-allocation__table {
+  width: 100%;          /* min-w-full */
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 0.875rem;  /* text-sm */
+}
+
+.resource-allocation__table-head {
+  background-color: #f3f4f6; /* bg-gray-100 */
+}
+
+.resource-allocation__th {
+  padding: 0.75rem 1.5rem;   /* px-6 py-3 */
+  text-align: left;          /* text-left */
+  font-size: 0.75rem;        /* text-xs */
+  font-weight: 600;          /* font-medium */
+  text-transform: uppercase; /* uppercase */
+  letter-spacing: 0.08em;    /* tracking-wider */
+  color: #4b5563;            /* text-gray-600 */
+  border-bottom: 1px solid #e5e7eb; /* divide-y / border */
+  white-space: nowrap;
+}
+
+.resource-allocation__table-body {
+  background-color: #ffffff;
+}
+
+/* Filas */
+.resource-allocation__row {
+  border-bottom: 1px solid #e5e7eb; /* divide-y */
+}
+
+.resource-allocation__row:hover {
+  background-color: #f9fafb; /* hover:bg-gray-50 */
+}
+
+/* Celdas */
+.resource-allocation__cell {
+  padding: 1rem 1.5rem;      /* px-6 py-4 */
+  white-space: nowrap;        /* whitespace-nowrap */
+  font-size: 0.875rem;        /* text-sm */
+  color: #6b7280;             /* text-gray-500 */
+}
+
+.resource-allocation__cell--primary {
+  font-weight: 500;           /* font-medium */
+  color: #111827;             /* text-gray-900 */
+}
+
+/* Badge de carga (% carga) */
+.resource-allocation__load-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;   /* px-3 py-1 */
+  border-radius: 999px;       /* rounded-full */
+  font-size: 0.75rem;         /* text-xs */
+  font-weight: 600;           /* font-semibold */
+}
+
+/* Niveles de carga (semáforo) */
+.resource-allocation__load-badge--high {
+  background-color: #fee2e2;  /* bg-red-100 */
+  color: #991b1b;             /* text-red-800 */
+}
+
+.resource-allocation__load-badge--medium {
+  background-color: #fef3c7;  /* bg-yellow-100 */
+  color: #92400e;             /* text-yellow-800 */
+}
+
+.resource-allocation__load-badge--low {
+  background-color: #dcfce7;  /* bg-green-100 */
+  color: #166534;             /* text-green-800 */
+}
+
+/* Nota Corporativa */
+.resource-allocation__note {
+  margin-top: 2.5rem;         /* mt-10 */
+  padding: 1.5rem;            /* p-6 */
+  background-color: #eef2ff;  /* bg-indigo-50 */
+  border-radius: 0.75rem;     /* rounded-xl */
+  border: 1px solid #c7d2fe;  /* border-indigo-200 */
+}
+
+.resource-allocation__note-title {
+  margin: 0 0 0.75rem 0;      /* mb-3 */
+  font-size: 1.25rem;         /* text-xl */
+  font-weight: 600;           /* font-semibold */
+  color: #3730a3;             /* text-indigo-800 */
+}
+
+.resource-allocation__note-text {
+  margin: 0;
+  font-size: 0.875rem;        /* text-sm */
+  color: #4338ca;             /* text-indigo-700 */
+}
+
+.resource-allocation__note-text strong {
+  font-weight: 700;
+}

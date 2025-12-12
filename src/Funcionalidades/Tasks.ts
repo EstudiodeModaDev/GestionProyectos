@@ -166,6 +166,7 @@ export function useTasks(tasksSvc: TareasProyectosService) {
     } 
 
     if (responsable) {
+      if(responsable !== "all")
       filters.push(`(startswith(fields/Responsable, '${responsable}') or startswith(fields/CorreoResponsable, '${responsable}'))`);
     } 
 
@@ -179,17 +180,18 @@ export function useTasks(tasksSvc: TareasProyectosService) {
     };
   }, [estado, responsable, search,]); 
 
-  const loadProyecTasks = React.useCallback(async (IdProyecto: string) => {
+  const loadProyecTasks = React.useCallback(async (IdProyecto: string): Promise<TaskApertura[]> => {
     setLoading(true); setError(null);
     try {
       const items = await tasksSvc.getAll(buildFilter(IdProyecto));
       console.log("items")
       console.table(items)
-
       setTask(items);
+      return items
     } catch (e: any) {
       setError(e?.message ?? "Error cargando tareas");
       setTask([]);
+      return []
     } finally {
       setLoading(false);
     }
@@ -261,7 +263,7 @@ export function useTasks(tasksSvc: TareasProyectosService) {
       setLoading(true);
       setError(null);
       try {
-        const cantidad = (await tasksSvc.getAll({filter: `fields/IdProyecto eq '${projectId}' and fields/CorreoResponsable eq ''`, top: 20000})).lenght
+        const cantidad = (await tasksSvc.getAll({filter: `fields/IdProyecto eq '${projectId}' and fields/CorreoResponsable eq ''`, top: 20000})).length
         return cantidad
       } catch (e: any) {
         setError(e?.message ?? "Error asignando tarea");
@@ -308,8 +310,31 @@ export function useTasks(tasksSvc: TareasProyectosService) {
     [tasksSvc]
   );
 
+  const getCritialPaths = React.useCallback(
+    async (IdProyecto: string): Promise<string[]> => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const items = await tasksSvc.getAll(buildFilter(IdProyecto));
+
+        const critical = items
+          .filter((item) => item.TipoTarea === "Critica" && item.Codigo)
+          .map((item) => item.Codigo as string);
+
+        return critical;
+      } catch (e: any) {
+        setError(e?.message ?? "Error cargando tareas");
+        return [];
+      } finally {
+        setLoading(false);
+      }
+    },
+    [tasksSvc, buildFilter]
+  );
+
   return {
     loading, error, state, onGoingTasks, task, estado, search, responsable, 
-    loadTasksOnGoing, setField, createAllTemplate, loadProyecTasks, setResponsable, setSearch, setEstado, updateTaskPhase, searchPredecessor, searchSuccesor, selfAssign, unassignTasks, setComplete
+    loadTasksOnGoing, setField, createAllTemplate, loadProyecTasks, setResponsable, setSearch, setEstado, updateTaskPhase, searchPredecessor, searchSuccesor, selfAssign, unassignTasks, setComplete, getCritialPaths
   };
 }

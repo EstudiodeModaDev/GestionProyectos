@@ -215,8 +215,8 @@ export const Dashboard: React.FC<DashboardProps> = ({onOpenProjectKanban, onShow
                   <td>{ParseDateShow(p.FechaInicio)}</td>
                   <td>{ParseDateShow(p.Fechadelanzamiento)}</td>
                   <td>
-                    <span className={p.fulfillment === 100 ? "badge badge--ok" : "badge badge--info"}>
-                      {p.fulfillment ?? "-"}%
+                    <span className={Number(p.Progreso) === 100 ? "badge badge--ok" : "badge badge--info"}>
+                      {p.Progreso ?? "-"}%
                     </span>
                   </td>
                   <td>

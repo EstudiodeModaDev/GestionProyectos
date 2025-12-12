@@ -120,7 +120,7 @@ export class TareasProyectosService {
     return this.toModel(res);
   }
 
-  async getAll(opts?: GetAllOpts) {
+  async getAll(opts?: GetAllOpts): Promise<TaskApertura[]> {
     await this.ensureIds()
     // ID -> id, Title -> fields/Title (cuando NO está prefijado con '/')
     const normalizeFieldTokens = (s: string) =>

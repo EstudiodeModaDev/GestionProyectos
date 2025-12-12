@@ -219,7 +219,6 @@
   --space-8: 2rem;
 }
 
-
 a {
   font-weight: 500;
   color: #646cff;
@@ -284,7 +283,7 @@ button:focus-visible {
     padding-bottom: 0.5rem; 
     padding-left: 1.5rem;
     padding-right: 1.5rem; 
-    border-radius: 0.5rem; 
+    border-radius: 4px; 
     width: fit-content; 
     font-weight: 600; 
     color: #ffffff; 

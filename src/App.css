@@ -154,7 +154,7 @@
 
 .sidebar__primary-btn {
   width: 100%;
-  background-color: var(--sb-primary);
+  background-color: #111827;        /* base: oscuro neutro */
   color: #ffffff;
   font-weight: 700;
   padding: 0.75rem 1rem;
@@ -164,16 +164,14 @@
   border: none;
   outline: none;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.7);
+  box-shadow: none;                 /* sin sombra fuerte por defecto */
   transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
 }
 
 .sidebar__primary-btn:hover {
-  background-color: var(--sb-primary-hover);
+  background-color: #1f2937;        /* un poco más claro al hover */
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.8);
 }
-
 .sidebar__footer {
   padding: 1rem;
   font-size: 0.75rem;
@@ -183,6 +181,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.sidebar__primary-btn--active {
+  background-color: var(--sb-primary);    /* tu morado principal */
+  box-shadow: 0 0 0 1px #818cf8,
+              0 10px 24px rgba(15, 23, 42, 0.9);
+  transform: translateY(0);
+}
+.sidebar__primary-btn--active:hover {
+  background-color: var(--sb-primary);    /* que no cambie mucho al hover */
+  box-shadow: 0 0 0 1px #a5b4fc,
+              0 12px 26px rgba(15, 23, 42, 1);
+}
+
 
 /* ========================================================= 
 ========================= Layout ==========================

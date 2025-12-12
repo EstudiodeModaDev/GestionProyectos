@@ -29,3 +29,10 @@ export type tareaInsumoProyecto = {
     IdInsumoProyecto: string;
     TipoUso: string;
 }
+
+// models/graph.ts (o donde manejes DriveItem)
+export type DriveItem = {
+  id: string;
+  name: string;
+  "@microsoft.graph.downloadUrl"?: string;
+};

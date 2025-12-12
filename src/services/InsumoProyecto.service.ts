@@ -1,6 +1,6 @@
 import type { GraphRest } from "../graph/graphRest";
 import type { GetAllOpts } from "../models/commons";
-import type { InsumoProyecto } from "../models/Insumos";
+import type { DriveItem, InsumoProyecto } from "../models/Insumos";
 import { esc } from "../utils/commons";
 
 export class InsumoProyectoService {
@@ -78,8 +78,26 @@ export class InsumoProyectoService {
       }
   }
 
+  // ---------- ADJUNTOS ----------
+async uploadAttachment(itemId: string, file: File): Promise<DriveItem> {
+  await this.ensureIds();
+  const safeName = encodeURIComponent(file.name).replace(/\(/g, "%28").replace(/\)/g, "%29");
+  const path = `/sites/${this.siteId}/lists/${this.listId}/items/${itemId}` + `/driveItem/children/${safeName}/content`;
+  console.log("Subiendo adjunto a:", path);
+  const driveItem = await this.graph.putBinary<DriveItem>(path, file, file.type);
+  return driveItem;
+}
 
-  // ---------- CRUD ----------
+  async getAttachments(itemId: string): Promise<DriveItem[]> {
+    await this.ensureIds();
+
+    const path = `/sites/${this.siteId}/lists/${this.listId}/items/${itemId}/driveItem/children`;
+    const res = await this.graph.get<{ value: DriveItem[] }>(path);
+    return res.value ?? [];
+  }
+
+
+   // ---------- CRUD ----------
   async create(record: Omit<InsumoProyecto, 'ID'>) {
     await this.ensureIds()
     const res = await this.graph.post<any>(

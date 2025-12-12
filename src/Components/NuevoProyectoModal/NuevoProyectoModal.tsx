@@ -2,9 +2,10 @@ import React from "react";
 import "./NuevoProyectoModal.css";
 import { useGraphServices } from "../../graph/graphContext";
 import { useProjects } from "../../Funcionalidades/Proyectos";
-import { useAperturaTienda } from "../../Funcionalidades/AperturaTienda";
+
 import { useTasks } from "../../Funcionalidades/Tasks";
 import { useInsumosProyecto, usePlantillaInsumos, useTareaInsumoProyecto, useTareaPlantillaInsumo } from "../../Funcionalidades/Insumos";
+import { useAperturaTiendaPlantilla } from "../../Funcionalidades/AperturaTienda";
 
 
 interface NuevoProyectoModalProps {open: boolean; onClose: () => void;}
@@ -12,27 +13,24 @@ interface NuevoProyectoModalProps {open: boolean; onClose: () => void;}
 export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({open, onClose,}) => {
   const {proyectos, apertura: aperturaSvc, tasks, plantillaInsumos, insumoProyecto, plantillaTareaInsumo, tareaInsumoProyecto} = useGraphServices()
   const {state, setField, handleSubmit, loading} = useProjects(proyectos)
-  const {loadInsumosPlantilla, insumos} = usePlantillaInsumos(plantillaInsumos)
-  const {rows: tareasCrear} = useAperturaTienda(aperturaSvc)
+  const {loadInsumosPlantilla} = usePlantillaInsumos(plantillaInsumos)
+  const {rows: tareasCrear} = useAperturaTiendaPlantilla(aperturaSvc)
   const {createAllInsumosFromTemplate} = useInsumosProyecto(insumoProyecto)
   const {createAllTemplate, loading: submitting} = useTasks(tasks)
-  const {loadTareaInsumosPlantilla, insumos: tareasInsumosPlantilla} = useTareaPlantillaInsumo(plantillaTareaInsumo)
+  const {loadTareaInsumosPlantilla} = useTareaPlantillaInsumo(plantillaTareaInsumo)
   const {createAllInsumosTareaFromTemplate} = useTareaInsumoProyecto(tareaInsumoProyecto)
 
   const handleCreate = async (e: React.FormEvent) => {
-      e.preventDefault();
-      const created = await handleSubmit(e)
-      const tasksCrated = await createAllTemplate(e, tareasCrear, created.Id!, new Date(created.FechaInicio));
-      await loadInsumosPlantilla("Apertura tienda")
-      console.log(insumos)
-      alert("Insumos cargados desde plantilla: " + insumos.length)
-      await loadTareaInsumosPlantilla("Apertura tienda")
-      const insumosCreated = await createAllInsumosFromTemplate(e, insumos,created.Id!)
-      await createAllInsumosTareaFromTemplate(e, tareasInsumosPlantilla, insumosCreated.data)
-      
-      console.log("Tareas creadas " + tasksCrated)
-      onClose()
-    };
+    e.preventDefault();
+    const created = await handleSubmit(e);
+    const tasksCreated = await createAllTemplate(e, tareasCrear, created.Id!, new Date(created.FechaInicio));
+    const plantillaInsumosArr = await loadInsumosPlantilla("Apertura tienda");
+    const plantillaTareaArr = await loadTareaInsumosPlantilla("Apertura tienda");
+    const insumosCreated = await createAllInsumosFromTemplate(e, plantillaInsumosArr, created.Id!);
+    await createAllInsumosTareaFromTemplate(e, plantillaTareaArr, insumosCreated.data);
+    console.log("Tareas creadas ", tasksCreated);
+    onClose();
+  };
 
   if (!open) return null;
 

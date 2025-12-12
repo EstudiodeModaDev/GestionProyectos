@@ -1,0 +1,154 @@
+/* Contenedor general */
+.gantt-root {
+  padding: 2rem;
+}
+
+/* Título principal => text-3xl font-bold text-gray-800 mb-6 */
+.gantt-titulo {
+  font-size: 1.875rem; /* 3xl */
+  line-height: 2.25rem;
+  font-weight: 700;
+  color: #1f2937; /* gray-800 */
+  margin-bottom: 1.5rem; /* mb-6 */
+}
+
+/* Subtítulo => text-gray-600 mb-8 */
+.gantt-subtitulo {
+  font-size: 0.95rem;
+  color: #4b5563; /* gray-600 */
+  margin-bottom: 2rem; /* mb-8 */
+}
+
+/* Leyenda => flex mb-8 text-sm */
+.gantt-leyenda {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  font-size: 0.875rem; /* text-sm */
+}
+
+/* Items de leyenda */
+.gantt-leyenda-item {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+}
+
+.gantt-leyenda-item--critica {
+  color: #b91c1c; /* red-700 */
+}
+
+.gantt-leyenda-item--normal {
+  color: #4338ca; /* indigo-600 */
+}
+
+.gantt-leyenda-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 9999px;
+  margin-right: 0.5rem;
+}
+
+.gantt-leyenda-dot--critica {
+  background-color: #ef4444; /* red-500 */
+}
+
+.gantt-leyenda-dot--normal {
+  background-color: #6366f1; /* indigo-500 */
+}
+
+.gantt-contenedor {
+  background-color: #ffffff;
+  border-radius: 0.75rem; /* rounded-xl */
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.1),
+    0 4px 6px -4px rgba(15, 23, 42, 0.1); /* shadow-lg */
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid #e5e7eb; /* gray-200 */
+}
+
+.gantt-encabezado-row {
+  display: flex;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151; /* gray-700 */
+  background-color: #f3f4f6; /* gray-100 */
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.gantt-encabezado-tarea {
+  width: 35%;
+  padding: 0.75rem;
+  flex-shrink: 0;
+}
+
+.gantt-encabezado-cronograma {
+  width: 65%;
+  padding: 0.75rem;
+  flex-shrink: 0;
+}
+
+.gantt-fila {
+  display: flex;
+  align-items: center;
+  max-height: 45px;            
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.15s ease;
+  padding: 5px 0 5px 0;
+}
+
+.gantt-fila:hover {
+  background-color: #f9fafb; 
+}
+
+.gantt-celda-tarea {
+  width: 33.333%;
+  padding: 0.75rem;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827; 
+}
+
+.gantt-tarea-id {
+  color: #4f46e5; 
+  margin-right: 0.5rem;
+  font-weight: 700;
+}
+
+.gantt-tarea-dependencia {
+  font-size: 0.75rem;
+  color: #6b7280; 
+  margin-left: 0.5rem;
+}
+
+.gantt-celda-cronograma {
+  width: 66.666%;
+  padding: 0.75rem;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.gantt-barra {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 20px;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.gantt-barra--normal {
+  background-color: #4f46e5; 
+}
+
+.gantt-barra--critica {
+  background-color: #dc2626; 
+}
+
+/* Mensaje vacío */
+.gantt-vacio {
+  padding: 1rem 1.25rem;
+  font-size: 0.875rem;
+  color: #6b7280; /* gray-500 */
+}

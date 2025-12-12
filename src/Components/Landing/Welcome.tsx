@@ -1,4 +1,3 @@
-// src/LandingPage.tsx
 import "./Welcome.css";
 
 export type LandingPage = {

@@ -2,7 +2,7 @@ import React from "react";
 import type { AperturaTiendaService } from "../services/Plantillas.service";
 import type { apertura } from "../models/AperturaTienda";
 
-export function useAperturaTienda(aperturaSvc: AperturaTiendaService) {
+export function useAperturaTiendaPlantilla(aperturaSvc: AperturaTiendaService) {
   const [rows, setRows] = React.useState<apertura[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -40,8 +40,30 @@ export function useAperturaTienda(aperturaSvc: AperturaTiendaService) {
   const applyRange = React.useCallback(() => { loadTasks(); }, [loadTasks]);
   const reloadAll  = React.useCallback(() => { loadTasks(); }, [loadTasks, search]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+          
+      // Objeto de creación
+      const payload: apertura = {
+        Codigo: state.Codigo ?? "",
+        CorreoResponsable: "",
+        Dependencia: state.Dependencia,
+        Diaspararesolver: state.Diaspararesolver,
+        Phase: state.Phase,
+        Responsable: "",
+        TipoTarea: state.TipoTarea,
+        Title: state.Title
+      };
+      await aperturaSvc.create(payload);
+      alert("Se ha creado el registro con éxito")
+      await loadTasks()
+    } finally {
+        setLoading(false);
+      }
+  };
+
+  const handleEdit = async (Id: string,) => {
     setLoading(true);
     try {
           
@@ -49,22 +71,37 @@ export function useAperturaTienda(aperturaSvc: AperturaTiendaService) {
       const payload: apertura = {
         Codigo: state.Codigo ?? "",
         CorreoResponsable: "Iniciado",
-        Dependencia: "",
-        Diaspararesolver: "",
-        Phase: "",
-        Responsable: "",
-        TipoTarea: "",
-        Title: ""
+        Dependencia: state.Dependencia,
+        Diaspararesolver: state.Diaspararesolver,
+        Phase: state.Phase,
+        Responsable: state.Responsable,
+        TipoTarea: state.TipoTarea,
+        Title: state.Title
       };
-      await aperturaSvc.create(payload);
-      alert("Se ha creado el registro con éxito")
+      await aperturaSvc.update(Id, payload);
+      alert("Se ha editado el registro con éxito")
+      await loadTasks()
     } finally {
         setLoading(false);
       }
   };
 
+  const handleDelete = async (Id: string,) => {
+    setLoading(true);
+    try {
+      const ok = window.confirm("¿Seguro que quieres eliminar esta tarea?\nEsta acción no se puede deshacer.");
+      if (!ok) return;
+      await aperturaSvc.delete(Id);
+      await loadTasks()
+      alert("Se ha eliminado el registro con éxito")
+    } finally {
+        setLoading(false);
+      }
+  };
+
+
   return {
     rows, loading, error, search, state,
-    applyRange, reloadAll, setSearch, setField, handleSubmit, loadTasks
+    applyRange, reloadAll, setSearch, setField, handleSubmit, loadTasks, handleEdit, handleDelete
   };
 }
