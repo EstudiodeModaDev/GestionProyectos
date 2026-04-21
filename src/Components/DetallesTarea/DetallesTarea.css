@@ -385,3 +385,222 @@
     max-width: 100%;
   }
 }
+.tdm-responsables-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tdm-responsable-info {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================= */
+/* Lista de entregables */
+/* ============================= */
+
+.salidas-list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ============================= */
+/* Item */
+/* ============================= */
+
+.salidas-item {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.salidas-item:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+/* ============================= */
+/* Título */
+/* ============================= */
+
+.salidas-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* descripción pequeña */
+.salidas-hint {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ============================= */
+/* Input file */
+/* ============================= */
+
+.salidas-item input[type="file"] {
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.salidas-item input[type="file"]:hover {
+  border-color: #3b82f6;
+}
+
+/* ============================= */
+/* Textarea */
+/* ============================= */
+
+.salidas-item textarea {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.salidas-item textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #ffffff;
+}
+
+/* ============================= */
+/* Checkbox */
+/* ============================= */
+
+.salidas-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.salidas-check input {
+  width: 16px;
+  height: 16px;
+}
+
+/* ============================= */
+/* Estado archivo */
+/* ============================= */
+
+.salidas-file-name {
+  font-size: 12px;
+  color: #059669;
+  background: #ecfdf5;
+  padding: 4px 8px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+/* ============================= */
+/* Footer */
+/* ============================= */
+
+.modal__footer {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ============================= */
+/* Botones */
+/* ============================= */
+
+.btn {
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+}
+
+.btn--primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn--primary:hover {
+  background: #1d4ed8;
+}
+
+.modal__btn-cancel {
+  background: #e5e7eb;
+}
+
+.modal__btn-cancel:hover {
+  background: #d1d5db;
+}
+
+/* ============================= */
+/* Responsive */
+/* ============================= */
+
+@media (max-width: 600px) {
+  .salidas-item {
+    padding: 12px;
+  }
+
+  .salidas-title {
+    font-size: 13px;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .modal__footer {
+    flex-direction: column;
+  }
+}
+
+/* ✅ Scroll real dentro del panel del modal */
+.modal__panel {
+  width: min(960px, calc(100vw - 24px));
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  border-radius: 12px;
+}
+
+/* ✅ Evita que el body “tire” scroll raro detrás */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+}
+
+/* ✅ Asegura que el panel quede por encima del backdrop */
+.modal__panel {
+  position: relative;
+  background: #fff;
+}

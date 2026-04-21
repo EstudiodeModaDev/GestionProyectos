@@ -1,9 +1,9 @@
 import * as React from "react";
 import "./GanttView.css";
 import { useGraphServices } from "../../graph/graphContext";
-import { useTasks } from "../../Funcionalidades/Tasks";
 import type { ProjectSP } from "../../models/Projects";
-import type { TaskApertura } from "../../models/AperturaTienda";
+import type { projectTasks, } from "../../models/AperturaTienda";
+import { useTasks } from "../../Funcionalidades/ProjectTasksHooks/useProjectTasks";
 
 type GanttViewProps = {
   project: ProjectSP;
@@ -21,9 +21,15 @@ type GanttRowVM = {
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
+/**
+ * Muestra el cronograma del proyecto y resalta las tareas de la ruta critica.
+ *
+ * @param props - Propiedades del componente.
+ * @returns Vista tipo Gantt construida a partir de las tareas del proyecto.
+ */
 export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
   const { tasks: tasksSvc } = useGraphServices();
-  const {loadProyecTasks, task, getCritialPaths, loading,} = useTasks(tasksSvc);
+  const {loadProjectTasks, tasks: ProjecTasks, critical, loading,} = useTasks(tasksSvc);
   const [criticalPathIds, setCriticalPathsId] = React.useState<string[]>([]);
 
   //Fecha inicial del proyecto o por defecto fecha actual
@@ -41,10 +47,10 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
 
     (async () => {
       try {
-        await loadProyecTasks(project.Id!);
-        const critical = await getCritialPaths(project.Id!);
+        await loadProjectTasks(project.Id!);
+        const criticals = await critical.getCriticalCodes(project.Id!);
         if (!cancel) {
-          setCriticalPathsId(critical);
+          setCriticalPathsId(criticals);
         }
       } catch (e) {
         if (!cancel) console.error("Error cargando tareas:", e);
@@ -54,22 +60,38 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
     return () => {
       cancel = true;
     };
-  }, [loadProyecTasks, getCritialPaths, project.Id]);
+  }, [project.Id]);
 
   const { totalDays, rows } = React.useMemo(() => {
-    if (!task.length) {
+    if (!ProjecTasks.length) {
       return { totalDays: 0, rows: [] as GanttRowVM[] };
     }
 
-    const tasksByCodigo = new Map<string, TaskApertura>();
-    task.forEach((t) => {
+    const tasksByCodigo = new Map<string, projectTasks>();
+    ProjecTasks.forEach((t) => {
       if (t.Codigo) tasksByCodigo.set(t.Codigo, t);
     });
 
     const startDates = new Map<string, Date>();
-    const getKey = (t: TaskApertura) => t.Codigo || t.Id || "";
+    
 
-    function computeStart(t: TaskApertura): Date {
+    /**
+     * Obtiene una clave estable para cachear y relacionar tareas en memoria.
+     *
+     * @param t - Tarea a identificar.
+     * @returns Codigo o identificador utilizable como clave interna.
+     */
+    const getKey = (t: projectTasks) => t.Codigo || t.Id || "";
+
+    
+
+    /**
+     * Calcula la fecha de inicio efectiva de una tarea segun su dependencia.
+     *
+     * @param t - Tarea cuyo inicio debe resolverse.
+     * @returns Fecha estimada de arranque dentro del cronograma.
+     */
+    function computeStart(t: projectTasks): Date {
       const key = getKey(t);
       if (!key) return baseDate;
 
@@ -82,7 +104,7 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
         const depCodigo = t.Dependencia; // ej: "T1"
         const parent =
           tasksByCodigo.get(depCodigo) ||
-          task.find(
+          ProjecTasks.find(
             (x) => x.Codigo === depCodigo || x.Id === depCodigo
           );
 
@@ -100,11 +122,11 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
     }
 
     // Calcular todas las fechas de inicio
-    task.forEach((t) => computeStart(t));
+    ProjecTasks.forEach((t) => computeStart(t));
 
     // Fecha máxima de fin (defensivo por si falta alguna en el mapa)
     let maxEnd = new Date(baseDate);
-    for (const t of task) {
+    for (const t of ProjecTasks) {
       const key = getKey(t);
       if (!key) continue;
 
@@ -123,7 +145,7 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
 
     const dayWidth = 100 / totalDays;
 
-    const rows: GanttRowVM[] = task.map((t) => {
+    const rows: GanttRowVM[] = ProjecTasks.map((t) => {
       const key = getKey(t);
       const start = startDates.get(key) ?? baseDate;
 
@@ -155,7 +177,7 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
     });
 
     return { totalDays, rows };
-  }, [task, criticalPathIds, baseDate]);
+  }, [ProjecTasks, criticalPathIds, baseDate]);
 
 
   if (loading) {
@@ -173,7 +195,8 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
         Visualización secuencial de tareas y dependencias para el proyecto: {project.Title}.
       </p>
 
-      {/* Leyenda */}
+      {/* Leyenda */
+}
       <div className="gantt-leyenda">
         <span className="gantt-leyenda-item gantt-leyenda-item--critica">
           <span className="gantt-leyenda-dot gantt-leyenda-dot--critica" />Ruta Crítica (Bloqueante)</span>
@@ -181,7 +204,8 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
           <span className="gantt-leyenda-dot gantt-leyenda-dot--normal" />Tarea Normal</span>
       </div>
 
-      {/* Contenedor del Gantt */}
+      {/* Contenedor del Gantt */
+}
       <div className="gantt-contenedor">
         <div className="gantt-encabezado-row">
           <div className="gantt-encabezado-tarea">Tarea</div>

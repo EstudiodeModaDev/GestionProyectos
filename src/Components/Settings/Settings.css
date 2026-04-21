@@ -1,143 +1,243 @@
 /* =========================================================
-   Panel de plantillas (Settings)
+   Panel de plantillas
    ========================================================= */
 
 .plantillas-panel {
-  padding: var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  background: var(--page-bg);
+  gap: var(--space-6);
+  padding: var(--space-6);
+  min-height: 100%;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--page-bg) 88%, white 12%) 0%,
+      var(--page-bg) 100%
+    );
   font-family: var(--font-family);
-  color: var(--ink);
+  box-sizing: border-box;
 }
 
 .plantillas-title {
   margin: 0;
-  font-size: var(--text-xl);
-  font-weight: 800;
-  letter-spacing: 0.02em;
   color: var(--ink);
+  font-size: clamp(var(--text-xl), 2vw, var(--text-3xl));
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
 }
 
-/* Lista de tarjetas */
+/* =========================================================
+   Grid de plantillas
+   ========================================================= */
+
 .plantillas-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-6);
+  align-items: stretch;
 }
 
-/* Card de plantilla */
+/* =========================================================
+   Card
+   ========================================================= */
+
 .plantilla-card {
-  background: var(--surface);
-  border-radius: var(--card-radius);
-  padding: var(--space-4);
-  border: 1px solid var(--border-subtle);
-  box-shadow: var(--card-shadow-soft);
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  justify-content: space-between;
+  gap: var(--space-6);
+  min-height: 220px;
+  padding: var(--space-6);
+  border-radius: calc(var(--card-radius) + 0.25rem);
+  border: 1px solid var(--border-subtle);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface) 94%, white 6%) 0%,
+      var(--surface) 100%
+    );
+  box-shadow: var(--card-shadow-soft);
+  overflow: hidden;
   transition:
-    transform 0.12s ease,
-    box-shadow 0.15s ease,
-    border-color 0.15s ease,
-    background 0.15s ease;
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.plantilla-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--primary) 0%,
+    color-mix(in srgb, var(--primary) 65%, white 35%) 100%
+  );
+  opacity: 0.95;
 }
 
 .plantilla-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--card-shadow-strong);
+  transform: translateY(-4px);
   border-color: var(--primary-soft-border);
-  background: var(--surface-subtle);
+  box-shadow: var(--card-shadow-strong);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface) 88%, var(--primary-soft) 12%) 0%,
+      var(--surface) 100%
+    );
 }
+
+/* =========================================================
+   Header card
+   ========================================================= */
 
 .plantilla-card__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: var(--space-4);
 }
 
 .plantilla-card__title {
   margin: 0;
-  font-size: var(--text-base);
-  font-weight: 700;
   color: var(--ink);
-}
-
-/* Acciones dentro de la card */
-.plantilla-card__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  word-break: break-word;
 }
 
 /* =========================================================
-   Botones reutilizables del panel (pl-btn)
+   Actions
+   ========================================================= */
+
+.plantilla-card__actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+
+/* =========================================================
+   Buttons
    ========================================================= */
 
 .pl-btn {
-  border-radius: var(--chip-radius);
-  padding: 0.4rem 0.9rem;
-  font-size: var(--text-sm);
-  font-weight: 600;
+  appearance: none;
   border: 1px solid transparent;
-  cursor: pointer;
+  border-radius: var(--btn-radius);
+  min-height: 2.75rem;
+  padding: 0.85rem 1rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.1s ease,
-    border-color 0.15s ease;
-  white-space: nowrap;
+  width: 100%;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
   box-shadow: var(--btn-shadow);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
 }
 
-/* Botón primario: "Ver tareas" */
-.pl-btn--primary {
-  background: var(--primary);
-  color: var(--btn-ink);
+.pl-btn:hover {
+  transform: translateY(-1px);
   box-shadow: var(--btn-shadow-strong);
 }
 
-.pl-btn--primary:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
+.pl-btn:active {
+  transform: translateY(0);
 }
 
-/* Botón ghost: "Ver insumos" */
+.pl-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent),
+    var(--btn-shadow-strong);
+}
+
+.pl-btn--primary {
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: var(--btn-ink, #fff);
+  border-color: color-mix(in srgb, var(--primary-hover) 70%, black 30%);
+}
+
+.pl-btn--primary:hover {
+  background: linear-gradient(180deg, var(--primary-hover) 0%, var(--primary-hover) 100%);
+}
+
 .pl-btn--ghost {
-  background: transparent;
-  color: var(--muted);
+  background: var(--surface);
+  color: var(--ink);
   border-color: var(--border-subtle);
 }
 
 .pl-btn--ghost:hover {
   background: var(--surface-subtle);
   border-color: var(--border-strong);
-  color: var(--ink);
 }
 
-/* Responsive pequeño */
+/* =========================================================
+   Responsive
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .plantillas-panel {
+    padding: var(--space-5);
+    gap: var(--space-5);
+  }
+
+  .plantillas-list {
+    gap: var(--space-5);
+  }
+
+  .plantilla-card {
+    min-height: 200px;
+    padding: var(--space-5);
+  }
+}
+
 @media (max-width: 640px) {
   .plantillas-panel {
     padding: var(--space-4);
+    gap: var(--space-4);
+  }
+
+  .plantillas-title {
+    font-size: var(--text-xl);
   }
 
   .plantillas-list {
     grid-template-columns: 1fr;
+    gap: var(--space-4);
   }
 
-  .plantilla-card__actions {
-    flex-direction: column;
+  .plantilla-card {
+    min-height: auto;
+    padding: var(--space-4);
+    gap: var(--space-4);
+  }
+
+  .plantilla-card__title {
+    font-size: var(--text-base);
   }
 
   .pl-btn {
-    width: 100%;
-    justify-content: center;
+    min-height: 2.65rem;
+    padding: 0.8rem 0.95rem;
   }
 }

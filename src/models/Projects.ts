@@ -8,7 +8,9 @@ export type ProjectSP = {
     Fechadelanzamiento: string;
     FechaInicio: string
     fulfillment: number;
-    CorreoLider: string
+    CorreoLider: string,
+    Marca: string;
+    Zona: string;
 }
 
 export interface Kpm {

@@ -1,43 +1,23 @@
-import { TZDate } from "@date-fns/tz";
-import { isSaturday, isSunday } from "date-fns";
-import type { Holiday } from "festivos-colombianos";
-
+/**
+ * Escapa comillas simples dentro de una cadena.
+ *
+ * Esta utilidad duplica cada comilla simple para que el valor pueda usarse
+ * con seguridad en contextos donde ese caracter tiene significado especial,
+ * como filtros o consultas de texto.
+ *
+ * @param s Texto que se desea sanear.
+ * @returns La cadena con las comillas simples escapadas.
+ */
 export const esc = (s: string) => String(s).replace(/'/g, "''");
 
-const sliceYMD = (s?: string) => (s ? s.slice(0, 10) : "");
 
-export const isHoliday = (date: Date, holidays: Holiday[]) => {
-  const ymd = toYMD(date);
-  return holidays.some(h =>
-    sliceYMD(h.holiday) === ymd || sliceYMD(h.celebrationDay) === ymd
-  );
-};
-
-const toYMD = (d: Date) => {
-  const dd = new Date(d);
-  dd.setHours(12, 0, 0, 0);
-  const y = dd.getFullYear();
-  const m = String(dd.getMonth() + 1).padStart(2, "0");
-  const day = String(dd.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-};
-
-export function calcularFechaSolucionPorDias(apertura: Date, diasAns: number, holidays: Holiday[]): TZDate {
-  const TIMEZONE = "America/Bogota";
-
-  let restante = diasAns;
-  let actual = new TZDate(apertura, TIMEZONE);
-
-  while (restante > 0) {
-    actual = new TZDate(actual.getFullYear(), actual.getMonth(), actual.getDate() + 1, actual.getHours(), actual.getMinutes(), actual.getSeconds(), TIMEZONE);
-
-    if (isSaturday(actual) || isSunday(actual) || isHoliday(actual, holidays)) {
-      continue;
-    }
-
-    restante--;
-  }
-
-  console.log("Fecha de solución (días hábiles):", actual);
-  return actual;
-}
+/**
+ * Normaliza un valor de texto para comparaciones insensibles a formato.
+ *
+ * Convierte valores nulos o indefinidos en cadena vacia, elimina espacios al
+ * inicio y al final, y transforma el contenido a minusculas.
+ *
+ * @param s Valor que se desea normalizar.
+ * @returns La representacion textual normalizada del valor recibido.
+ */
+export const normalize = (s: any) => String(s ?? "").trim().toLowerCase();

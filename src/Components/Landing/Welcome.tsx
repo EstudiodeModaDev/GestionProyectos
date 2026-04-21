@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import "./Welcome.css";
 
 export type LandingPage = {
@@ -6,18 +7,25 @@ export type LandingPage = {
   footer?: React.ReactNode;             
 };
 
-
+/**
+ * Renderiza la pantalla de bienvenida previa al ingreso a la aplicacion.
+ *
+ * @param props - Propiedades de la pagina de aterrizaje.
+ * @returns Vista inicial con mensaje institucional y acceso al sistema.
+ */
 const LandingPage: React.FC<LandingPage> = ({onLogin}) => {
   return (
     <div className="lp-root">
-      {/* Header */}
+      {/* Header */
+}
       <header className="lp-header">
         <div className="lp-logo">
           <h1>Gestión de proyectos</h1>
         </div>
       </header>
 
-      {/* Hero */}
+      {/* Hero */
+}
       <main className="lp-main">
         <section className="lp-hero">
           <div className="lp-hero-left">
@@ -43,14 +51,15 @@ const LandingPage: React.FC<LandingPage> = ({onLogin}) => {
 
           <div className="lp-hero-rigt">
 
-            <a className="btn btn-primary-final btn-xs btn-block" onClick={() => onLogin()}>Ingresar</a>
+            <Link to="/home"><a className="btn btn-primary-final btn-xs btn-block" onClick={() => onLogin()}>Ingresar</a></Link>
 
           </div>
 
 
         </section>
 
-        {/* Features */}
+        {/* Features */
+}
         <section id="features" className="lp-section">
           <h2 className="lp-section-title">Todo lo que necesitas en un solo lugar</h2>
           <p className="lp-section-subtitle">

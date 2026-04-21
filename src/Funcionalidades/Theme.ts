@@ -1,6 +1,10 @@
 import React from "react";
 type Theme = "light" | "dark";
 
+/**
+ * Administra el tema visual de la aplicación y lo persiste en `localStorage`.
+ * @returns Tema activo y acción para alternarlo.
+ */
 export function useTheme() {
   const [theme, setTheme] = React.useState<Theme>("light");
 
@@ -15,8 +19,10 @@ export function useTheme() {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggle = () =>
-    setTheme((t) => (t === "dark" ? "light" : "dark"));
+  /**
+   * Alterna entre los temas `light` y `dark`.
+   */
+  const toggle = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
   return { theme, toggle };
 }

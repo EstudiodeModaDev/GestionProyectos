@@ -1,12 +1,14 @@
 import React from "react";
 import { InsumoProyectoService } from "../services/InsumoProyecto.service";
 import type {InsumoProyecto, plantillaInsumos, plantillaTareaInsumo, tareaInsumoProyecto,} from "../models/Insumos";
-import type { TaskApertura } from "../models/AperturaTienda";
+import type { projectTasks } from "../models/AperturaTienda";
 import type { PlantillaInsumoService } from "../services/PlantillaInsumos.service";
 import type { PlantillaTareaInsumoService } from "../services/PlantillaTareaInsumo.service";
 import type { TareaInsumoProyectoServicio } from "../services/TareaInsumoProyecto.service";
 import { useGraphServices } from "../graph/graphContext";
-import { FlowClient } from "./Flow";
+import { normalize } from "../utils/commons";
+import { useInsumosAttachment } from "./Attachments/Library/useInsumosAttachments";
+import type { Archivo } from "../models/Files";
 
 /* =========================================================
    Tipos compartidos
@@ -15,40 +17,21 @@ import { FlowClient } from "./Flow";
 export type TaskInsumoView = {
   id: string;
   title: string;
-  tipo: "Entrada" | "Salida";
+  tipo: string;
   texto: string;
   estado: "Subido" | "Pendiente";
+  fase?: string
 };
 
 type SalidaFiles = Record<string, File>;
 
-type FlowAttachment = {
-  insumoId: Number;
-  fileName: string;
-  fileContent: string; // base64
-};
+/**
+ * Administra los insumos de plantilla asociados a un proceso.
+ * @param insumosPlantillaSvc - Servicio de acceso a insumos plantilla.
+ * @returns Estado, formulario y operaciones CRUD del módulo.
+ */
 
-/* =========================================================
-   Flow client (una sola instancia)
-   ========================================================= */
 
-const FLOW_URL = "https://defaultcd48ecd97e154f4b97d9ec813ee42b.2c.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/e980b31073244251b0cd225ac44fdbb1/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=l9hjxmIGNpz1gF7SU0ZhNjfjQp22CZwDPByt1nw3IYw";
-const GET_URL = "https://defaultcd48ecd97e154f4b97d9ec813ee42b.2c.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/adb66fe637b44cca9830a6262899652c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2lwtEm4Bh9D8mu91WkPRmaUcVzn-V8fgJxpNKK2PAYc";
-
-const flowClient = new FlowClient(FLOW_URL);
-const getClient = new FlowClient(GET_URL)
-
-const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(",")[1] ?? result;
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 
 /* =========================================================
    usePlantillaInsumos
@@ -62,16 +45,25 @@ export function usePlantillaInsumos(insumosPlantillaSvc: PlantillaInsumoService)
     Categoria: "",
     Proceso: "",
     Title: "",
+    OpcionesJson: "",
+    PreguntaFlujo: false
   });
 
+  
+
+/**
+   * Actualiza un campo del formulario.
+   * @param k - Campo a modificar.
+   * @param v - Nuevo valor del campo.
+   */
   const setField = <K extends keyof plantillaInsumos>(k: K, v: plantillaInsumos[K]) => setState((s) => ({ ...s, [k]: v }));
 
-  const loadInsumosPlantilla = React.useCallback(
-    async (proceso: string): Promise<plantillaInsumos[]> => {
+  const loadInsumosPlantilla = React.useCallback(async (proceso: string): Promise<plantillaInsumos[]> => {
       setLoading(true);
       setError(null);
       try {
         const items = await insumosPlantillaSvc.getAll({filter: `fields/Proceso eq '${proceso}'`,});
+        console.log(items)
         setInsumos(items);
         return items;
       } catch (e: any) {
@@ -93,6 +85,8 @@ export function usePlantillaInsumos(insumosPlantillaSvc: PlantillaInsumoService)
           Categoria: state.Categoria,
           Proceso: state.Proceso,
           Title: state.Title,
+          OpcionesJson: state.OpcionesJson,
+          PreguntaFlujo: state.PreguntaFlujo,
         }
         await insumosPlantillaSvc.create(payload)
         loadInsumosPlantilla(proceso)
@@ -113,6 +107,8 @@ export function usePlantillaInsumos(insumosPlantillaSvc: PlantillaInsumoService)
           Categoria: state.Categoria,
           Proceso: state.Proceso,
           Title: state.Title,
+          OpcionesJson: state.OpcionesJson,
+          PreguntaFlujo: state.PreguntaFlujo,
         }
         await insumosPlantillaSvc.update(Id, payload)
         await loadInsumosPlantilla(proceso)
@@ -145,6 +141,13 @@ export function usePlantillaInsumos(insumosPlantillaSvc: PlantillaInsumoService)
   };
 }
 
+/**
+ * Administra las relaciones entre tareas plantilla e insumos plantilla.
+ * @param plantillaTareaInsumoSvc - Servicio de acceso a relaciones tarea-insumo plantilla.
+ * @returns Estado, formulario y operaciones CRUD del módulo.
+ */
+
+
 /* =========================================================
    useTareaPlantillaInsumo
    ========================================================= */
@@ -158,8 +161,17 @@ export function useTareaPlantillaInsumo(plantillaTareaInsumoSvc: PlantillaTareaI
     Proceso: "",
     TipoInsumo: "",
     Title: "",
+    Obligatorio: "",
+    OrdenPregunta: "",
   });
 
+  
+
+/**
+   * Actualiza un campo del formulario.
+   * @param k - Campo a modificar.
+   * @param v - Nuevo valor del campo.
+   */
   const setField = <K extends keyof plantillaTareaInsumo>(k: K, v: plantillaTareaInsumo[K]) => setState((s) => ({ ...s, [k]: v }));
 
   const loadTareaInsumosPlantilla = React.useCallback(
@@ -167,7 +179,7 @@ export function useTareaPlantillaInsumo(plantillaTareaInsumoSvc: PlantillaTareaI
       setLoading(true);
       setError(null);
       try {
-        const items = await plantillaTareaInsumoSvc.getAll({filter: `fields/Proceso eq '${proceso}'`,});
+        const items = await plantillaTareaInsumoSvc.getAll({filter: `fields/Proceso eq '${proceso}'`, top:4000});
         setInsumos(items);
         return items;
       } catch (e: any) {
@@ -190,6 +202,8 @@ export function useTareaPlantillaInsumo(plantillaTareaInsumoSvc: PlantillaTareaI
           Proceso: proceso,
           TipoInsumo: state.TipoInsumo,
           Title: state.Title,
+          Obligatorio: state.Obligatorio,
+          OrdenPregunta: state.OrdenPregunta
         }
         await plantillaTareaInsumoSvc.create(payload)
         loadTareaInsumosPlantilla(proceso)
@@ -202,8 +216,7 @@ export function useTareaPlantillaInsumo(plantillaTareaInsumoSvc: PlantillaTareaI
     [plantillaTareaInsumoSvc, state]
   );
 
-  const createLink = React.useCallback(
-    async (proceso: string, taskCode: string, insumoId: string, tipoUso: "Entrada" | "Salida") => {
+  const createLink = React.useCallback(async (proceso: string, taskCode: string, insumoId: string, tipoUso: "Entrada" | "Salida") => {
       setLoading(true);
       setError(null);
       try {
@@ -211,7 +224,9 @@ export function useTareaPlantillaInsumo(plantillaTareaInsumoSvc: PlantillaTareaI
           IdInsumo: insumoId,
           Proceso: proceso,
           TipoInsumo: tipoUso,
-          Title: taskCode,          // aquí guardamos el Código de la tarea
+          Title: taskCode,    
+          Obligatorio: "",
+          OrdenPregunta: "",
         };
         await plantillaTareaInsumoSvc.create(payload);
         await loadTareaInsumosPlantilla(proceso);
@@ -244,11 +259,19 @@ export function useTareaPlantillaInsumo(plantillaTareaInsumoSvc: PlantillaTareaI
   };
 }
 
+/**
+ * Administra los insumos concretos creados para un proyecto.
+ * @param insumosProyectoSvc - Servicio de acceso a insumos de proyecto.
+ * @returns Estado, colección y operaciones sobre insumos del proyecto.
+ */
+
+
 /* =========================================================
    useInsumosProyecto
    ========================================================= */
 
 export function useInsumosProyecto(insumosProyectoSvc: InsumoProyectoService) {
+  const insumosAttachments = useInsumosAttachment()
   const [rows, setRows] = React.useState<InsumoProyecto[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -259,8 +282,18 @@ export function useInsumosProyecto(insumosProyectoSvc: InsumoProyectoService) {
     TipoInsumo: "",
     Title: "",
     NombreInsumo: "",
+    insumoId: ""
   });
 
+  const graph = useGraphServices()
+
+  
+
+/**
+   * Actualiza un campo del formulario.
+   * @param k - Campo a modificar.
+   * @param v - Nuevo valor del campo.
+   */
   const setField = <K extends keyof InsumoProyecto>(k: K, v: InsumoProyecto[K]) => setState((s) => ({ ...s, [k]: v }));
 
   const loadFirstPage = React.useCallback(async () => {
@@ -287,6 +320,15 @@ export function useInsumosProyecto(insumosProyectoSvc: InsumoProyectoService) {
 
   const reloadAll = applyRange;
 
+  
+
+/**
+   * Guarda el texto de un insumo existente.
+   * @param e - Evento del formulario.
+   * @param id - Identificador del insumo.
+   * @param texto - Nuevo texto a persistir.
+   * @returns Insumo actualizado.
+   */
   const saveInsumo = async (e: React.FormEvent, id: string, texto: string) => {
     e.preventDefault();
     setLoading(true);
@@ -299,97 +341,169 @@ export function useInsumosProyecto(insumosProyectoSvc: InsumoProyectoService) {
     }
   };
 
-  const createAllInsumosFromTemplate = async (e: React.FormEvent, templateInsumos: plantillaInsumos[], idProyecto: string) => {
+  
+
+/**
+   * Crea todos los insumos de proyecto a partir de una plantilla base.
+   * @param e - Evento del formulario.
+   * @param plantillaInsumosArr - Insumos plantilla a materializar.
+   * @param proyectoId - Proyecto destino.
+   * @returns Resultado de creación y mapa entre plantilla e insumo creado.
+   */
+  const createAllInsumosFromTemplate = async (e: React.FormEvent, plantillaInsumosArr: plantillaInsumos[], proyectoId: string) => {
     e.preventDefault();
 
-    if (!templateInsumos || templateInsumos.length === 0) {
-      alert("No hay insumos definidos para esta plantilla");
+    if (!plantillaInsumosArr || plantillaInsumosArr.length === 0) {
+      alert("No hay plantillaInsumos definidos");
       return { ok: false, data: {} as Record<string, string> };
     }
 
     setLoading(true);
-    const mapByCodigo: Record<string, string> = {};
+
+    const map: Record<string, string> = {};
 
     try {
-      for (const item of templateInsumos) {
+      for (const p of plantillaInsumosArr) {
         const payload: InsumoProyecto = {
-          CategoriaInsumo: item.Categoria,
-          IdInsumo: item.Id ?? "",
+          Title: proyectoId,               
+          IdInsumo: String(p.Id ?? ""),      // referencia a la plantilla (si la necesitas)
+          TipoInsumo: "",                    // ajusta si aplica / o pon p.loQueSea
+          CategoriaInsumo: p.Categoria,
           Texto: "",
-          TipoInsumo: item.Categoria,
-          Title: idProyecto,
-          NombreInsumo: item.Title,
+          NombreInsumo: p.Title,
+          insumoId: ""
         };
 
-        const insumoCreated = await insumosProyectoSvc.create(payload);
-        if (item.Id && insumoCreated.Id) {
-          mapByCodigo[item.Id] = insumoCreated.Id;
+        const creado = await insumosProyectoSvc.create(payload);
+
+        const plantillaId = String(p.Id ?? "").trim();
+        const creadoId = String((creado as any)?.Id ?? "").trim();
+
+        if (!plantillaId || !creadoId) {
+          console.warn("No pude mapear insumo plantilla -> creado", { p, creado });
+          continue; 
         }
+        map[plantillaId] = creadoId;
       }
-    } catch (e) {
-      console.error("Error creando insumos proyecto ", e);
+
+      return { ok: true, data: map };
+    } catch (err) {
+      console.error("Error creando InsumoProyecto desde plantilla", err);
+      return { ok: false, data: {} as Record<string, string> };
     } finally {
       setLoading(false);
     }
-
-    return { ok: true, data: mapByCodigo };
   };
-
   /* ----------- adjuntos vía Flow: varios archivos a la vez ----------- */
 
-  const saveInsumoFiles = async (filesByInsumo: SalidaFiles) => {
+  
+
+/**
+   * Sube múltiples archivos y los asocia a sus insumos correspondientes.
+   * @param filesByInsumo - Mapa de archivos indexado por identificador de insumo.
+   * @returns Resultado de la carga masiva.
+   */
+  const saveInsumoFiles = async (filesByInsumo: SalidaFiles,) => {
     setLoading(true);
     try {
       const entries = Object.entries(filesByInsumo).filter(
         ([, file]) => !!file
-      );
+      ) as [string, File][];
 
       if (!entries.length) {
         return { ok: false, message: "No hay archivos para enviar" };
       }
 
-      const attachments: FlowAttachment[] = await Promise.all(
-        entries.map(async ([insumoId, file]) => ({
-          insumoId: Number(insumoId),
-          fileName: file.name,
-          fileContent: await fileToBase64(file),
-        }))
+      const uploadedFiles = await Promise.all(
+        entries.map(async ([insumoId, file]) => {
+          const path = `/`; // ajústalo a la ruta real
+          const uploaded = await insumosAttachments.handleUploadClick(path, file,file.name + "(" + "Insumo de la tarea " + insumoId + ")");
+
+          if (!uploaded) {
+            throw new Error(`No se pudo subir el archivo del insumo ${insumoId}`);
+          }
+
+          await insumosProyectoSvc.update(insumoId, {Texto: file.name, insumoId: uploaded.id});
+
+          return {
+            insumoId,
+            uploaded,
+          };
+        })
       );
 
-      const flujoResponse = await flowClient.invoke<{ attachments: FlowAttachment[] }, any>({attachments,});
+      return { ok: true, uploadedFiles };
+    } catch (e: any) {
+      console.error(e);
+      alert("Ha ocurrido un error subiendo los archivos, por favor vuelva a intentarlo");
+      return { ok: false, message: e?.message ?? "Error desconocido" };
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      if(flujoResponse.ok){
-        await Promise.all(entries.map(([insumoId, file]) => insumosProyectoSvc.update(insumoId, { Texto: file.name }))) 
-      } else {
-        alert("Ha ocurrido un error subiendo los archivos, por favor vuelva a intentarlo")
-      }
+  
+
+/**
+   * Guarda el texto capturado para un insumo.
+   * @param idInsumo - Identificador del insumo.
+   * @param text - Texto a persistir.
+   * @returns Estado simple de la operación.
+   */
+  const saveInsumoText = async (idInsumo: string, text: string) => {
+    setLoading(true);
+    try {
+      await insumosProyectoSvc.update(idInsumo, {Texto: text}) 
       return { ok: true };
     } finally {
       setLoading(false);
     }
   };
 
-  const getInsumosFiles = async (Id: Number) => {
-    setLoading(true);
-    try {
-      const flujoResponse = await getClient.invoke<{ Id: Number}, any>({Id});
+  
 
-      if(flujoResponse.ok){
-        return flujoResponse.items
-      } else {
-        alert("Ha ocurrido un error subiendo los archivos, por favor vuelva a intentarlo")
-        return[]
-      }
-    } finally {
-      setLoading(false);
+/**
+   * Carga los archivos asociados a un insumo.
+   * @param insumoId - Identificador del insumo.
+   * @returns Archivos encontrados.
+   */
+  const loadInsumosFiles = async (insumoId: string,): Promise<Archivo[]> => {
+    try {
+
+      const insumosProyectos: InsumoProyecto = await  graph.insumoProyecto.get(String(insumoId));
+      console.log(insumosProyectos)
+
+      if (!insumosProyectos) return [];
+
+      const files = await insumosAttachments.reload([insumosProyectos]);
+
+      return files ?? [];
+    } catch (e: any) {
+      console.error(e);
+      alert("Error cargando archivos de insumos: " + e.message);
+      return [];
     }
   };
-
   // helper para un solo file (compatibilidad con llamadas antiguas)
-  const saveInsumoFile = async (insumoId: string, file: File) => saveInsumoFiles({ [insumoId]: file });
+  
 
-   return {rows, loading, error, state, setField, loadFirstPage, applyRange, reloadAll, saveInsumo, createAllInsumosFromTemplate, saveInsumoFiles, saveInsumoFile, getInsumosFiles,};
+/**
+   * Sube un único archivo y lo vincula a un insumo.
+   * @param insumoId - Identificador del insumo.
+   * @param file - Archivo a subir.
+   * @returns Resultado de la carga.
+   */
+  const saveInsumoFile = async (insumoId: string, file: File,) => saveInsumoFiles({ [insumoId]: file },);
+
+   return {saveInsumoText, rows, loading, error, state, setField, loadFirstPage, applyRange, reloadAll, saveInsumo, createAllInsumosFromTemplate, saveInsumoFiles, saveInsumoFile, loadInsumosFiles,};
 }
+
+/**
+ * Administra las relaciones entre tareas de proyecto e insumos reales.
+ * @param tareaInsumoProyectoSvc - Servicio de acceso a vínculos tarea-insumo.
+ * @returns Estado, formulario y operaciones del módulo.
+ */
+
 
 /* =========================================================
    useTareaInsumoProyecto
@@ -403,8 +517,17 @@ export function useTareaInsumoProyecto(tareaInsumoProyectoSvc: TareaInsumoProyec
     IdInsumoProyecto: "",
     TipoUso: "",
     Title: "",
+    ProyectoId: ""
   });
+  const graph = useGraphServices()
 
+  
+
+/**
+   * Actualiza un campo del formulario.
+   * @param k - Campo a modificar.
+   * @param v - Nuevo valor del campo.
+   */
   const setField = <K extends keyof tareaInsumoProyecto>(k: K, v: tareaInsumoProyecto[K]) => setState((s) => ({ ...s, [k]: v }));
 
   const loadFirstPage = React.useCallback(async () => {
@@ -431,7 +554,22 @@ export function useTareaInsumoProyecto(tareaInsumoProyectoSvc: TareaInsumoProyec
 
   const reloadAll = applyRange;
 
-  const createAllInsumosTareaFromTemplate = async (e: React.FormEvent, templateInsumos: plantillaTareaInsumo[], data: Record<string, string>) => {
+  
+
+/**
+   * Crea los vínculos tarea-insumo a partir de una plantilla.
+   * @param e - Evento del formulario.
+   * @param templateInsumos - Vínculos de plantilla a materializar.
+   * @param mapPlantillaToCreado - Mapa entre insumo plantilla e insumo real creado.
+   * @param proyectoId - Proyecto destino.
+   * @returns Resultado general de la operación.
+   */
+  const createAllInsumosTareaFromTemplate = async (
+    e: React.FormEvent,
+    templateInsumos: plantillaTareaInsumo[],
+    mapPlantillaToCreado: Record<string, string>, // ✅ clave del arreglo anterior
+    proyectoId: string
+  ) => {
     e.preventDefault();
 
     if (!templateInsumos || templateInsumos.length === 0) {
@@ -443,32 +581,109 @@ export function useTareaInsumoProyecto(tareaInsumoProyectoSvc: TareaInsumoProyec
 
     try {
       for (const item of templateInsumos) {
+        const plantillaInsumoId = String(item.IdInsumo ?? "").trim();
+        const idRealInsumoProyecto = mapPlantillaToCreado[plantillaInsumoId];
+
+        if (!idRealInsumoProyecto) {
+          console.warn(
+            "No hay Id real de InsumoProyecto para este insumo de plantilla:",
+            { plantillaInsumoId, item, mapPlantillaToCreado }
+          );
+          continue; // o throw si debe ser obligatorio
+        }
+
         const payload: tareaInsumoProyecto = {
-          IdInsumoProyecto: data[item.IdInsumo!],
+          IdInsumoProyecto: idRealInsumoProyecto, // ✅ ID REAL CREADO
           TipoUso: item.TipoInsumo,
-          Title: item.Title,
+          Title: item.Title,                      // Id de la tarea creada (según tu modelo)
+          ProyectoId: proyectoId,
         };
 
         await tareaInsumoProyectoSvc.create(payload);
       }
-    } catch (e) {
-      console.error("Error creando vínculos tarea-insumo ", e);
+
+      return { ok: true };
+    } catch (err) {
+      console.error("Error creando vínculos tarea-insumo", err);
+      return { ok: false };
     } finally {
       setLoading(false);
     }
-
-    return { ok: true };
   };
 
-  return {rows, loading, error, state, setField, loadFirstPage, applyRange, reloadAll, createAllInsumosTareaFromTemplate,};
+  type FaseInsumo = "Entrada" | "Salida" | "Ambas";
+
+  
+
+/**
+   * Obtiene los insumos asociados a una tarea según la fase solicitada.
+   * @param proyectoId - Identificador del proyecto.
+   * @param taskId - Identificador o código de la tarea.
+   * @param fase - Fase a filtrar: entrada, salida o ambas.
+   * @returns Insumos únicos asociados a la tarea.
+   */
+  const getInsumosParaSubir = async (proyectoId: string, taskId: string, fase: FaseInsumo = "Ambas"): Promise<InsumoProyecto[]> => {
+
+    // 1) Traer relaciones por tarea + proyecto
+    let relaciones = await graph.tareaInsumoProyecto.getAll({filter: `fields/Title eq '${taskId}' and fields/ProyectoId eq '${proyectoId}'`, top: 4000,});
+
+    if (!relaciones?.length) return [];
+
+
+    if (fase !== "Ambas") {
+      relaciones = relaciones.filter((rel: tareaInsumoProyecto) => {
+        const tipoUso = normalize(rel?.TipoUso);
+        return tipoUso === normalize(fase);
+      });
+    }
+
+
+    if (!relaciones.length) return [];
+
+    // 3) Traer InsumoProyecto reales (por Id) en paralelo
+    const insumos = await Promise.all(
+      relaciones.map(async (rel: tareaInsumoProyecto) => {
+        const idInsumoProyecto = rel?.IdInsumoProyecto
+        if (!idInsumoProyecto) return null;
+
+        try {
+          const ins = await graph.insumoProyecto.get(String(idInsumoProyecto));
+          return ins ?? null;
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    // 4) Limpiar nulls
+    const result = insumos.filter(Boolean) as InsumoProyecto[];
+
+    // 5) Evitar duplicados por Id
+    const uniq = new Map<string, InsumoProyecto>();
+    for (const it of result) {
+      const id = String((it as any)?.Id ?? (it as any)?.fields?.Id ?? "");
+      if (id && !uniq.has(id)) uniq.set(id, it);
+    }
+
+    return [...uniq.values()];
+  };
+
+  return {rows, loading, error, state, setField, loadFirstPage, applyRange, reloadAll, createAllInsumosTareaFromTemplate, getInsumosParaSubir};
 }
+
+/**
+ * Resuelve los insumos de entrada y salida visibles para una tarea.
+ * @param task - Tarea actual.
+ * @returns Insumos organizados por fase y estado de carga.
+ */
+
 
 /* =========================================================
    useTaskInsumos
    ========================================================= */
 
-export function useTaskInsumos(task: TaskApertura | null) {
-  const { insumoProyecto, tareaInsumoProyecto } = useGraphServices();
+export function useTaskInsumos(task: projectTasks | null) {
+  const { insumoProyecto, tareaInsumoProyecto,} = useGraphServices();
   const [inputs, setInputs] = React.useState<TaskInsumoView[]>([]);
   const [outputs, setOutputs] = React.useState<TaskInsumoView[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -478,11 +693,16 @@ export function useTaskInsumos(task: TaskApertura | null) {
     if (!task) return;
     let cancelled = false;
 
+    
+
+/**
+     * Carga insumos y clasifica entradas y salidas para la tarea actual.
+     */
     const load = async () => {
       setLoading(true);
       setError(null);
       try {
-        const links: tareaInsumoProyecto[] = await tareaInsumoProyecto.getAll({filter: `fields/Title eq '${task.Codigo}'`,});
+        const links: tareaInsumoProyecto[] = await tareaInsumoProyecto.getAll({filter: `fields/Title eq '${task.Codigo}' and fields/ProyectoId eq '${task.IdProyecto}'`,});
 
         if (!links.length) {
           if (!cancelled) {
@@ -516,17 +736,19 @@ export function useTaskInsumos(task: TaskApertura | null) {
           if (!ins) continue;
 
           const texto = ins.Texto ?? "";
-          const tipoUso = (link.TipoUso as "Entrada" | "Salida") || "Entrada";
-
+          const tipoUso = ins.CategoriaInsumo;
+          const fase = (link.TipoUso as "Entrada" | "Salida") || "Entrada"
+          
           const view: TaskInsumoView = {
             id: ins.Id ?? link.IdInsumoProyecto,
             title: ins.NombreInsumo || `Insumo ${ins.IdInsumo}`,
             tipo: tipoUso,
             texto,
             estado: texto ? "Subido" : "Pendiente",
+            fase
           };
 
-          if (tipoUso === "Entrada") entradas.push(view);
+          if (fase === "Entrada") entradas.push(view);
           else salidas.push(view);
         }
 

@@ -1,39 +1,51 @@
 import React from "react";
 import type { Kpm, ProjectSP } from "../../models/Projects";
 import { useGraphServices } from "../../graph/graphContext";
-import { useProjects } from "../../Funcionalidades/Proyectos";
+
 import "./Dashboard.css"
 import { ParseDateShow } from "../../utils/Date";
 import { NuevoProyectoModal } from "../NuevoProyectoModal/NuevoProyectoModal";
 import { RenombrarProyectoModal } from "../EditarNombre/EditarNombreModal";
-import { useTasks } from "../../Funcionalidades/Tasks";
+import { useTasks } from "../../Funcionalidades/ProjectTasksHooks/useProjectTasks";
+import { useProjects } from "../../Funcionalidades/Projects/useProjects";
+import { Link } from "react-router-dom";
 
-
-interface DashboardProps {
-  onOpenProjectKanban: (project: ProjectSP) => void;
-  onShowPostClosureAnalysis: (project: ProjectSP) => void;
-}
-
-export const Dashboard: React.FC<DashboardProps> = ({onOpenProjectKanban, onShowPostClosureAnalysis,}) => {
+/**
+ * Presenta el tablero principal con KPIs y resumen de proyectos.
+ *
+ * @returns Vista general de proyectos activos, cerrados y metricas operativas.
+ */
+export const Dashboard: React.FC = () => {
   const [openDropdownId, setOpenDropdownId] = React.useState<string | null>(null);
   const [selected, setSelected] = React.useState<ProjectSP | null>(null);
   const [add, setAdd] = React.useState<boolean>(false);
   const [edit, setEdit] = React.useState<boolean>(false);
   const {proyectos, tasks} = useGraphServices()
-  const {rows: projects, loadFirstPage, archiveProject} = useProjects(proyectos)
+  const {rows: projects, loadAll, archiveProject} = useProjects(proyectos)
   const {loadTasksOnGoing, onGoingTasks} = useTasks(tasks)
 
   const activeProjects = projects.filter(p => p.Estado.toLocaleLowerCase().trim() === "en curso");
   const closedProjects = projects.filter(p => p.Estado.toLocaleLowerCase().trim() === "cerrado" || p.Estado.toLocaleLowerCase().trim() === "cancelado");
 
+  
+
+  /**
+   * Cuenta las tareas activas cuya fecha de resolucion ya vencio.
+   *
+   * @returns Cantidad de tareas atrasadas.
+   */
   function getOverdueTasksCount() {
       const today = new Date();
-      return onGoingTasks.filter(t =>
-          t.Estado !== "Completada" &&
-          new Date(t.FechaResolucion) < today
-      ).length;
+      return onGoingTasks.filter(t => t.Estado !== "Completada" && new Date(t.FechaResolucion!) < today).length;
   }
 
+  
+
+  /**
+   * Calcula el porcentaje de tareas activas que siguen dentro del tiempo esperado.
+   *
+   * @returns Texto con el porcentaje o un mensaje cuando no hay tareas activas.
+   */
   function getProjectsOnTimePercent() {
     if(onGoingTasks.length === 0) return "No hay tareas activas"
 
@@ -46,18 +58,15 @@ export const Dashboard: React.FC<DashboardProps> = ({onOpenProjectKanban, onShow
     return `${percent}%`;
   }
 
-  const activeProjectIds = React.useMemo(
-    () => activeProjects.map(p => p.Id).join("|"),
-    [activeProjects]
-  );
+  const activeProjectIds = React.useMemo(() => activeProjects.map(p => p.Id).join("|"), [activeProjects]);
 
   const unassignedByProject = React.useMemo(() => {
     const map: Record<string, number> = {};
 
     onGoingTasks.forEach((t) => {
       const projectId = t.IdProyecto ?? "";
-      const isUnassigned = !t.CorreoResponsable; // y si quieres solo incompletas:
-      // const isUnassigned = !t.CorreoResponsable && t.Estado !== "Completada";
+      //const isUnassigned = !t.CorreoResponsable;
+      const isUnassigned = true
 
       if (!projectId) return;
       map[projectId] = (map[projectId] ?? 0) + (isUnassigned ? 1 : 0);
@@ -70,16 +79,9 @@ export const Dashboard: React.FC<DashboardProps> = ({onOpenProjectKanban, onShow
     if (activeProjects.length > 0) {
       loadTasksOnGoing(activeProjects);
     }
-  }, [loadTasksOnGoing, activeProjectIds]);
+  }, [activeProjectIds]);
 
-  React.useEffect(() => {
-    const closeAll = () => setOpenDropdownId(null);
-    document.addEventListener("click", closeAll);
-    return () => document.removeEventListener("click", closeAll);
-  }, []);
-
-  const kpisCalc: Kpm[] = React.useMemo(() => {
-    const overdue = getOverdueTasksCount();
+  const kpisCalc: Kpm[] = React.useMemo(() => { const overdue = getOverdueTasksCount();
 
     return [
       {
@@ -97,18 +99,42 @@ export const Dashboard: React.FC<DashboardProps> = ({onOpenProjectKanban, onShow
     ];
   }, [onGoingTasks]);
 
+  
+
+  /**
+   * Abre o cierra el menu contextual de una tarjeta de proyecto.
+   *
+   * @param e - Evento del clic.
+   * @param id - Identificador del proyecto cuyo menu se alterna.
+   */
   const handleMenuClick = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     setOpenDropdownId(prev => (prev === id ? null : id));
   };
 
+  
+
+  /**
+   * Archiva o cierra un proyecto desde el menu contextual.
+   *
+   * @param e - Evento del clic.
+   * @param id - Identificador del proyecto a actualizar.
+   */
   const handleArchive = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    await archiveProject(e, id)
-    loadFirstPage()
+    await archiveProject(id)
+    loadAll()
     setOpenDropdownId(null)
   };
 
+  
+
+  /**
+   * Traduce el tono del KPI a la clase visual correspondiente.
+   *
+   * @param tone - Variante semantica del indicador.
+   * @returns Clase CSS asociada al tono.
+   */
   const kpiToneClass = (tone: Kpm["tone"]) => {
     switch (tone) {
       case "danger":
@@ -124,12 +150,10 @@ export const Dashboard: React.FC<DashboardProps> = ({onOpenProjectKanban, onShow
     <section className="app-main__surface">
       <header>
         <h1 className="dash__title">Dashboard</h1>
-        <p className="dash__subtitle">
-          Resumen ejecutivo y métricas clave de las aperturas en curso.
-        </p>
       </header>
 
-      {/* KPIs */}
+      {/* KPIs */
+}
       <div className="dash__kpis">
         {kpisCalc.map((kpm, idx) => (
           <article key={idx} className={`kpi ${kpiToneClass(kpm.tone)}`}>
@@ -142,7 +166,8 @@ export const Dashboard: React.FC<DashboardProps> = ({onOpenProjectKanban, onShow
         ))}
       </div>
 
-      {/* Botón + título proyectos activos */}
+      {/* Botón + título proyectos activos */
+}
       <div className="dash__projects-header">
         <button type="button" className="btn btn--primary" onClick={() => setAdd(true)}>
           <span>+ Nueva Apertura</span>
@@ -152,11 +177,13 @@ export const Dashboard: React.FC<DashboardProps> = ({onOpenProjectKanban, onShow
         </h2>
       </div>
 
-      {/* Cards de proyectos activos */}
+      {/* Cards de proyectos activos */
+}
       <div className="dash__projects-grid">
         {activeProjects.map(p => (
           <article key={p.Id} className="card card--accent">
-            {/* Menú contextual */}
+            {/* Menú contextual */
+}
             <div className="card__menu">
               <button type="button" className="btn btn--ghost" style={{ padding: 4, borderRadius: 999 }} onClick={e => handleMenuClick(e, p.Id ?? "")}>
                 <span>⋮</span>
@@ -174,27 +201,28 @@ export const Dashboard: React.FC<DashboardProps> = ({onOpenProjectKanban, onShow
               )}
             </div>
 
-            <button type="button" onClick={() => onOpenProjectKanban(p)} style={{ all: "unset", display: "block", cursor: "pointer" }}>
-              <h3 className="card__title">{p.Title}</h3>
-              <p className="card__meta">Líder: {p.Lider} | Entrega: {ParseDateShow(p.Fechadelanzamiento)}</p>
-              <p className="card__meta">Tareas sin asignar: {unassignedByProject[p.Id ?? ""] ?? 0}</p>
+            <Link to={`/kanban/${p.Id}`} style={{ all: "unset", display: "block", cursor: "pointer" }}>
+                <h3 className="card__title">{p.Title}</h3>
+                <p className="card__meta">Líder: {p.Lider} | Entrega: {ParseDateShow(p.Fechadelanzamiento)}</p>
+                <p className="card__meta">Tareas sin asignar: {unassignedByProject[p.Id ?? ""] ?? 0}</p>
 
-              <div className="card__progress-label">
-                <span>Progreso</span>
-                <span>{p.Progreso}%</span>
-              </div>
-              <div className="card__progress-track">
-                <div className="card__progress-bar" style={{ width: `${p.Progreso}%` }}/>
-              </div>
-            </button>
+                <div className="card__progress-label">
+                  <span>Progreso</span>
+                  <span>{p.Progreso}%</span>
+                </div>
+                <div className="card__progress-track">
+                  <div className="card__progress-bar" style={{ width: `${p.Progreso}%` }}/>
+                </div>
+            </Link>
           </article>
         ))}
       </div>
 
-      {/* Proyectos cerrados */}
+      {/* Proyectos cerrados */
+}
       <div style={{ marginTop: 32 }}>
         <h2 className="dash__title" style={{ fontSize: "1.3rem" }}>
-          Historial de proyectos cerrados ({closedProjects.length})
+          Proyectos ({closedProjects.length})
         </h2>
 
         <div className="dash__table-wrapper">
@@ -209,7 +237,7 @@ export const Dashboard: React.FC<DashboardProps> = ({onOpenProjectKanban, onShow
               </tr>
             </thead>
             <tbody>
-              {closedProjects.map(p => (
+              {projects.map(p => (
                 <tr key={p.Id}> 
                   <td>{p.Title} ({p.Estado})</td>
                   <td>{ParseDateShow(p.FechaInicio)}</td>
@@ -220,16 +248,18 @@ export const Dashboard: React.FC<DashboardProps> = ({onOpenProjectKanban, onShow
                     </span>
                   </td>
                   <td>
-                    <button type="button" className="btn btn--ghost-primary btn--ghost" style={{ paddingInline: 10, paddingBlock: 4, fontSize: "0.75rem" }} onClick={() => onShowPostClosureAnalysis(p)}>
+                    {
+                    <Link type="button" className="btn btn--ghost-primary btn--ghost" style={{ paddingInline: 10, paddingBlock: 4, fontSize: "0.75rem" }} to={`/metrics/${p.Id}`}>
                       Ver fugas
-                    </button>
+                    </Link>
+                    }
                   </td>
                 </tr>
               ))}
-              {closedProjects.length === 0 && (
+              {projects.length === 0 && (
                 <tr>
                   <td colSpan={5} style={{ textAlign: "center", padding: 16 }}>
-                    No hay proyectos cerrados aún.
+                    No hay ningun proyecto cerrados aún.
                   </td>
                 </tr>
               )}
@@ -237,8 +267,8 @@ export const Dashboard: React.FC<DashboardProps> = ({onOpenProjectKanban, onShow
           </table>
         </div>
       </div>
-      <NuevoProyectoModal open={add} onClose={() => {setAdd(false), loadFirstPage()}}/>
-      <RenombrarProyectoModal open={edit} onClose={() => {setEdit(false), loadFirstPage()}} Selected={selected!}/>
+      <NuevoProyectoModal open={add} onClose={() => {setAdd(false), loadAll()}}/>
+      <RenombrarProyectoModal open={edit} onClose={() => {setEdit(false), loadAll()}} Selected={selected!}/>
     </section>
   );
 };

@@ -405,10 +405,9 @@
   gap: 6px;
 }
 
-/* chip BLOQUEADA / CRITICA */
+/* chip */
 
-.chip-blocked {
-  background-color: #dc2626;
+.chip {
   color: #ffffff;
   padding: 2px 8px;
   border-radius: 6px;
@@ -418,10 +417,43 @@
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
+  margin: 2px
 }
 
-.chip-critical {
-  background-color: #b91c1c;
+.chip{
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  color: white;
+  margin-left: 4px;
+}
+
+/* dependencia */
+.chip-blocked{
+  background:#64748b;
+}
+
+/* prioridad */
+.chip-critical{
+  background:#b91c1c;
+}
+
+/* estados */
+.chip-devuelta{
+  background:#f97316;
+}
+
+.chip-proceso{
+  background:#3b82f6;
+}
+
+.chip-vencida{
+  background:#ef4444;
+}
+
+.chip-completada{
+  background:#22c55e;
 }
 
 /* Fecha + semáforo */

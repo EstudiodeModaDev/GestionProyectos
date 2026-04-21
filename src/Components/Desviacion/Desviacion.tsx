@@ -1,208 +1,118 @@
-// PostClosureAnalysis.tsx
 import React from "react";
 import "./Desviacion.css";
-import type { ProjectSP } from "../../models/Projects";
-import { ParseDateShow } from "../../utils/Date";
-import { useTasks } from "../../Funcionalidades/Tasks";
 import { useGraphServices } from "../../graph/graphContext";
-import type { TaskApertura } from "../../models/AperturaTienda";
+import { useTasks } from "../../Funcionalidades/ProjectTasksHooks/useProjectTasks";
+import type { DesviacionProps } from "./types";
+import { ColumnFilterModal } from "./components/ColumnFilterModal";
+import { FeedbackMessages } from "./components/FeedbackMessages";
+import { MetricsGrid } from "./components/MetricsGrid";
+import { TasksTable } from "./components/TasksTable";
+import { useDesviacionMetrics } from "../../Funcionalidades/Metrics/hooks/useDesviacionMetrics";
+import { useTaskResponsables } from "../../Funcionalidades/Metrics/hooks/useTaskResponsables";
+import type { TaskColumnFilterKey, TaskColumnFilters } from "./types";
 
-type Props = {
-  project: ProjectSP;
-  onBack?: () => void;
+const DEFAULT_FILTERS: TaskColumnFilters = {
+  tarea: "all",
+  area: "all",
+  responsable: "all",
+  estado: "all",
 };
 
-type AnalysisRow = {
-  task: TaskApertura;
-  isCritical: boolean;
-  deviation: number | string;
-  deviationClass: string;
-  isHeavyDeviation: boolean;
-  plannedLabel: string;
-  actualLabel: string;
-};
-
-const Desviation: React.FC<Props> = ({ project, onBack }) => {
-  const { tasks} = useGraphServices();
-  const { task: rows, loadProyecTasks } = useTasks(tasks);
+/**
+ * Presenta el tablero de metricas y desviaciones del proyecto seleccionado.
+ *
+ * @param props - Propiedades del modulo de desviacion.
+ * @returns Vista con KPIs, filtros por columna y detalle de tareas.
+ */
+const Desviacion: React.FC<DesviacionProps> = ({ project, }) => {
+  const graph = useGraphServices();
+  const { tasks: projectTasksList, loadAllProjectTasks, loading, error, } = useTasks(graph.tasks);
+  const [filters, setFilters] = React.useState<TaskColumnFilters>(DEFAULT_FILTERS);
+  const [activeColumn, setActiveColumn] = React.useState<TaskColumnFilterKey | null>(null);
 
   React.useEffect(() => {
-    loadProyecTasks(project.Id ?? "")
-  }, [project])
+    if (!project.Id) return;
+    void loadAllProjectTasks(project.Id);
+    setFilters(DEFAULT_FILTERS);
+  }, [project.Id]);
 
-  if (!rows || rows.length === 0) {
-    return (
-      <div className="pca-root">
-        <div className="pca-header">
-          <div>
-            <h1 className="pca-title">Análisis Post-Cierre: {project.Title}</h1>
-            <p className="pca-subtitle"> Aún no hay configuración de análisis post-cierre para este proyecto.</p>
-          </div>
-          {onBack && (
-            <button className="pca-back-btn" onClick={onBack}>
-              ← Volver
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const taskIds = React.useMemo(
+    () =>
+      projectTasksList
+        .map((task) => String(task.Id ?? "").trim())
+        .filter(Boolean),
+    [projectTasksList]
+  );
 
-  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+  const { responsablesByTaskId, responsablesLoading, responsablesError } = useTaskResponsables(taskIds);
 
-  // =========================
-  // 1) Preparamos filas de análisis
-  // =========================
-  const analysisRows: AnalysisRow[] = rows.map((task) => {
-    const isCritical = task.TipoTarea === "Critica";
-    const planned = task.FechaResolucion ? new Date(task.FechaResolucion) : null;
-    let plannedLabel = task.FechaResolucion ? ParseDateShow(task.FechaResolucion) : "Sin fecha planeada";
-    let actualLabel = "";
-    let deviation: number | string = "N/A";
-
-    if (task.FechaCierre) {
-      const actual = new Date(task.FechaCierre);
-
-      if (planned) {
-        const ms = actual.getTime() - planned.getTime();
-        deviation = Math.round(ms / MS_PER_DAY);
-      }
-
-      actualLabel = ParseDateShow(task.FechaCierre);
-    } else {
-      actualLabel = "No se finalizó";
-      deviation = "N/A";
-    }
-
-    const deviationClass = typeof deviation === "number"  ? deviation > 0 ? "pca-cell-deviation-negative" : "pca-cell-deviation-positive" : "pca-cell-deviation-neutral";
-    const isHeavyDeviation = isCritical && typeof deviation === "number" && deviation > 5;
-
-    return { task,
-      isCritical,
-      deviation,
-      deviationClass,
-      isHeavyDeviation,
-      plannedLabel,
-      actualLabel,
-    };
+  const {  filteredTasks, taskRows, filterOptions, cumplimientoProyecto, avanceGlobal, desviacionMeta, cumplimientoArea, blockedCount, summaryText, lastTargetDateLabel,} = useDesviacionMetrics({
+    project,
+    projectTasksList,
+    filters,
+    responsablesByTaskId,
   });
 
-  // =========================
-  // 2) KPIs de desviación
-  // =========================
-  const criticalRows = analysisRows.filter((r) => r.isCritical);
+  const handleFilterChange = React.useCallback((column: TaskColumnFilterKey, value: string) => {
+    setFilters((current) => ({
+      ...current,
+      [column]: value,
+    }));
+    setActiveColumn(null);
+  }, []);
 
-  const numericDeviations = criticalRows
-    .map((r) => (typeof r.deviation === "number" ? r.deviation : null))
-    .filter((v): v is number => v !== null);
-
-  let deviationText = "0 días";
-  if (numericDeviations.length > 0) {
-    const maxDelay = Math.max(...numericDeviations); // puede ser negativo
-    const minDelay = Math.min(...numericDeviations);
-
-    if (maxDelay > 0) {
-      deviationText = `+${maxDelay} días`;
-    } else if (minDelay < 0) {
-      deviationText = `${minDelay} días (adelanto)`;
-    }
-  }
-
-  const criticalWithDelay = criticalRows.filter(
-    (r) => typeof r.deviation === "number" && r.deviation > 0
-  ).length;
-
-  const totalCritical = criticalRows.length || 1;
-  const criticalAffected = `${criticalWithDelay} / ${totalCritical}`;
-
-  // =========================
-  // 3) Render
-  // =========================
   return (
-    <div className="pca-root">
-      {/* Header */}
-      <div className="pca-header">
-        <div>
-          <h1 className="pca-title">Análisis Post-Cierre: {project.Title}</h1>
-          <p className="pca-subtitle">
-            Desviación del proyecto cerrado con base en tareas críticas.
-          </p>
+    <section className="desv">
+      <div className="desv__backdrop" aria-hidden="true" />
+
+      <header className="desv__hero">
+        <div className="desv__hero-main">
+          <div>
+            <p className="desv__eyebrow">Panel de desvio</p>
+            <h1 className="desv__title">Ver solicitud {project.Title}</h1>
+          </div>
         </div>
 
-        {onBack && (
-          <button className="btn btn-cancel" onClick={onBack}>
-            ← Volver al dashboard
-          </button>
-        )}
-      </div>
-
-      {/* KPIs */}
-      <div className="pca-kpi-grid">
-        <div className={"pca-kpi-card " + (Number(project.Progreso) < 100 ? "pca-kpi-border-red" : "pca-kpi-border-green")}>
-          <p className="pca-kpi-label">Cumplimiento global</p>
-          <p className={"pca-kpi-value " + (Number(project.Progreso) < 100 ? "pca-kpi-value-red" : "pca-kpi-value-green")}>
-            {project.Progreso}%
-          </p>
+        <div className="desv__summary">
+          <span className="desv__summary-label">Resumen</span>
+          <strong className="desv__summary-value">{summaryText}</strong>
+          <span className="desv__summary-hint">
+            Lectura rapida del estado actual del proyecto.
+          </span>
         </div>
+      </header>
 
-        <div className="pca-kpi-card pca-kpi-border-orange">
-          <p className="pca-kpi-label">Días de desviación final</p>
-          <p className="pca-kpi-value pca-kpi-value-orange">
-            {deviationText}
-          </p>
-        </div>
+      <FeedbackMessages 
+        error={error}
+        responsablesError={responsablesError}
+        isLoading={loading || responsablesLoading}
+      />
 
-        <div className="pca-kpi-card pca-kpi-border-indigo">
-          <p className="pca-kpi-label">Tareas críticas afectadas</p>
-          <p className="pca-kpi-value pca-kpi-value-indigo">
-            {criticalAffected}
-          </p>
-        </div>
-      </div>
+      <MetricsGrid
+        cumplimientoProyecto={Number(cumplimientoProyecto)}
+        avanceGlobal={avanceGlobal}
+        desviacionMeta={desviacionMeta}
+        cumplimientoArea={cumplimientoArea}
+        blockedCount={blockedCount}
+      />
 
-      {/* Tabla de tareas */}
-      <div className="pca-table-section">
-        <h2 className="pca-table-title">
-          Detalle de incumplimiento por tarea crítica
-        </h2>
+      <TasksTable taskRows={taskRows} filters={filters} onOpenFilter={setActiveColumn} />
 
-        <div className="pca-table-wrapper">
-          <table className="pca-table">
-            <thead>
-              <tr>
-                <th>Tarea (Ruta Crítica)</th>
-                <th>Fecha planeada</th>
-                <th>Fecha real</th>
-                <th>Desviación (días)</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {analysisRows.map((row) => (
-                <tr key={row.task.Id} className={row.isHeavyDeviation ? "pca-row pca-row-critical" : "pca-row"}>
-                  <td className={"pca-cell-text " + (row.isCritical ? "pca-cell-critical" : "pca-cell-normal")}>
-                    {row.task.Title}
-                  </td>
-                  <td className="pca-cell-text-muted">
-                    {row.plannedLabel}
-                  </td>
-                  <td className="pca-cell-text-muted">
-                    {row.actualLabel}
-                  </td>
-                  <td className={row.deviationClass}>{row.deviation}</td>
-                  <td>
-                    <span className={"pca-status-chip " + (row.task.Estado === "Completa" ? "pca-status-ok" : "pca-status-bad")}>
-                      {row.task.Estado}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+      {!!filteredTasks.length && (
+        <div className="desv__footnote">Ultima fecha objetivo detectada: {lastTargetDateLabel}</div>
+      )}
+
+      {activeColumn ? (
+        <ColumnFilterModal
+          column={activeColumn}
+          value={filters[activeColumn]}
+          options={filterOptions[activeColumn]}
+          onClose={() => setActiveColumn(null)}
+          onApply={(value) => handleFilterChange(activeColumn, value)}
+        />
+      ) : null}
+    </section>
   );
 };
 
-export default Desviation;
+export default Desviacion;

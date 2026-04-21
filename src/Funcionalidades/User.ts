@@ -1,7 +1,10 @@
-// src/hooks/useCurrentUserPhoto.ts
 import * as React from "react";
 import { useAuth } from "../auth/authProvider";
 
+/**
+ * Carga la fotografía del usuario autenticado desde Microsoft Graph.
+ * @returns Imagen codificada en data URL y estado de carga.
+ */
 export function useCurrentUserPhoto() {
   const { getToken } = useAuth();
   const [photo, setPhoto] = React.useState<string | null>(null);
@@ -13,7 +16,6 @@ export function useCurrentUserPhoto() {
     (async () => {
       try {
         setLoading(true);
-        // Si quieres usar el token del contexto en lugar del de userPhoto:
         const token = await getToken();
         const resp = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
           headers: { Authorization: `Bearer ${token}` },
@@ -23,9 +25,8 @@ export function useCurrentUserPhoto() {
           if (!cancel) setPhoto(null);
           return;
         }
-    
+
         const blob = await resp.blob();
-        
 
         const dataUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -33,7 +34,6 @@ export function useCurrentUserPhoto() {
           reader.onerror = reject;
           reader.readAsDataURL(blob);
         });
-
 
         if (!cancel) setPhoto(dataUrl);
       } catch {

@@ -1,0 +1,198 @@
+/* Overlay */
+.rrm-overlay{
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  z-index: 9999;
+}
+
+/* Modal */
+.rrm-modal{
+  width: min(560px, 100%);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--modal-radius);
+  box-shadow: var(--modal-shadow);
+  overflow: hidden;
+  font-family: var(--font-family);
+}
+
+/* Header */
+.rrm-header{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.rrm-titleWrap{ min-width: 0; }
+.rrm-title{
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.rrm-subtitle{
+  margin: var(--space-2) 0 0 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.rrm-close{
+  border: 1px solid var(--border-subtle);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 0.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  cursor: pointer;
+  box-shadow: var(--btn-shadow);
+  font-size: 1.4rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+.rrm-close:hover{ color: var(--ink); }
+.rrm-close:disabled{ opacity: .6; cursor: not-allowed; }
+
+/* Body */
+.rrm-body{
+  padding: var(--space-6);
+}
+
+.rrm-label{
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: var(--space-2);
+}
+
+.rrm-textarea{
+  width: 97%;
+  resize: vertical;
+  border-radius: var(--card-radius);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface);
+  color: var(--ink);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-base);
+  outline: none;
+}
+.rrm-textarea::placeholder{ color: var(--muted-soft); }
+.rrm-textarea:focus{
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.rrm-textarea.is-invalid{
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-soft);
+}
+
+.rrm-meta{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.rrm-error{
+  font-size: var(--text-xs);
+  color: var(--danger);
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+.rrm-error.show{ opacity: 1; }
+
+.rrm-counter{
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* Actions */
+.rrm-actions{
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-subtle);
+}
+
+.rrm-btn{
+  border-radius: var(--btn-radius);
+  padding: var(--space-3) var(--space-4);
+  font-weight: 800;
+  font-size: var(--text-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  box-shadow: var(--btn-shadow);
+}
+
+.rrm-btnGhost{
+  background: var(--surface);
+  border-color: var(--border-subtle);
+  color: var(--ink);
+}
+.rrm-btnGhost:hover{
+  background: var(--table-row-hover);
+}
+
+.rrm-btnPrimary{
+  background: var(--primary);
+  color: var(--btn-ink, #fff);
+}
+.rrm-btnPrimary:hover{
+  background: var(--primary-hover);
+  box-shadow: var(--btn-shadow-strong);
+}
+
+.rrm-btn:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Asegura que SIEMPRE aplique dentro del modal */
+.rrm-modal textarea.rrm-textarea{
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+
+  font-family: var(--font-family) !important;
+  font-size: var(--text-base) !important;
+  line-height: 1.4;
+
+  color: var(--ink) !important;
+  background: var(--surface) !important;
+
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--card-radius) !important;
+
+  padding: var(--space-3) var(--space-4) !important;
+
+  outline: none;
+  appearance: none;
+}
+
+.rrm-modal textarea.rrm-textarea::placeholder{
+  color: var(--muted-soft) !important;
+}
+
+.rrm-modal textarea.rrm-textarea:focus{
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px var(--primary-soft) !important;
+}
+
+.rrm-modal textarea.rrm-textarea.is-invalid{
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 3px var(--danger-soft) !important;
+}

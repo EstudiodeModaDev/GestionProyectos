@@ -12,6 +12,10 @@ type AuthCtx = {
 
 const Ctx = React.createContext<AuthCtx | null>(null);
 
+/**
+ * Renderiza el componente AuthProvider.
+ * @returns Resultado de la operacion.
+ */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [ready, setReady] = React.useState(false);
   const [account, setAccount] = React.useState<AccountInfo | null>(null);
@@ -70,6 +74,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };
 
+/**
+ * Expone el estado y las acciones relacionadas con auth.
+ * @returns Resultado de la operacion.
+ */
 export function useAuth(): AuthCtx {
   const ctx = React.useContext(Ctx);
   if (!ctx) throw new Error('useAuth must be used within <AuthProvider>');

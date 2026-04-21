@@ -7,6 +7,12 @@ import "./Header.css"
 
 type AppHeaderProps = {title: string; userName: string; avatarUrl: string; onHomeClick?: () => void; mail: string};
 
+/**
+ * Renderiza la cabecera principal de la aplicacion con controles globales.
+ *
+ * @param props - Propiedades visibles en la barra superior.
+ * @returns Encabezado con cambio de tema, cierre de sesion e informacion del usuario.
+ */
 export const AppHeader: React.FC<AppHeaderProps> = ({title, userName,}) => {
     const { theme, toggle } = useTheme();
     const { photo } = useCurrentUserPhoto();
@@ -26,10 +32,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({title, userName,}) => {
         </button>
 
 
-        {/* Título centrado */}
+        {/* Título centrado */
+}
         <h1 className="hd-title">{title}</h1>
 
-        {/* Usuario */}
+        {/* Usuario */
+}
         <div className="hd-user">
           <div className="userInfo">
             <span className="userName">{userName}</span>

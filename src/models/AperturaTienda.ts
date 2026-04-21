@@ -1,18 +1,30 @@
-export type apertura = {
-    Id?: string;
-    Title: string;
-    Responsable: string;
-    CorreoResponsable: string;
-    Dependencia: string;
-    Codigo: string;
-    Phase: string;
-    Diaspararesolver: string;
-    TipoTarea: string;
+export type TemplateTasks = {
+  Id?: string;
+  Title: string;
+  Codigo: string;
+  Phase: string;
+  TipoTarea: string;
+  Diaspararesolver: number;
+  Dependencia: string;
+  diasHabiles: boolean;
+  AreaResponsable: string
 }
 
-export type TaskApertura = apertura & {
+export type projectTasks = TemplateTasks & {
+  FechaResolucion: string | null
   IdProyecto: string;
-  FechaResolucion: string,
   Estado: string;
-  FechaCierre: string | null;
-};
+  FechaCierre: string | null;  
+  fechaInicio: string | null
+  razonDevolucion?: string
+  razonBloqueo: string
+}
+
+export type taskResponsible = {
+  Id?: string;
+  Title: string //Nombre
+  Correo: string
+  IdTarea: string
+}
+
+export type ResolvedAssignee = { nombre: string; correo: string };

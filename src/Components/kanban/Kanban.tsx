@@ -1,63 +1,133 @@
 // src/components/KanbanApertura.tsx
 import React from "react";
-import "./Kanban.css"; // reutiliza las clases que ya tienes (kanban-column, kanban-task, etc.)
+import "./Kanban.css";
 import type { ProjectSP } from "../../models/Projects";
-import type { TaskApertura } from "../../models/AperturaTienda";
+import type { projectTasks, taskResponsible } from "../../models/AperturaTienda";
 import { useGraphServices } from "../../graph/graphContext";
-import { useTasks } from "../../Funcionalidades/Tasks";
-import { ParseDateShow } from "../../utils/Date";
-import {TaskDetailModal} from "../DetallesTarea/DetallesTarea"
-import { useProjects } from "../../Funcionalidades/Proyectos";
+import { TaskDetailModal } from "../DetallesTarea/DetallesTarea";
+import { useTasks } from "../../Funcionalidades/ProjectTasksHooks/useProjectTasks";
+import { normalize } from "../../utils/commons";
+import KanbanHeader from "./Components/Toolbar";
+import KanbanCard from "./Components/KanbanCard";
 
 export type KanbanEstado = "Pendiente" | "En Proceso" | "Completada";
 
 export type KanbanPhase = {
-  id: number;   // debe coincidir con task.Phase
-  name: string; // nombre bonito de la fase
+  id: number;
+  name: string;
 };
 
 type Props = {
   project: ProjectSP;
-  responsablesMap?: Record<string, string>;
-  onCreateTask?: () => void;
-  onAlert?: (msg: string) => void;
-  fases: KanbanPhase[];   
+  responsablesMap?: Record<string, string>; // correo -> nombre (opcional)
+  fases: KanbanPhase[];
 };
 
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
+/**
+ * Renderiza el tablero Kanban de un proyecto con filtros y detalle de tareas.
+ *
+ * @param props - Proyecto activo, fases disponibles y mapa opcional de responsables.
+ * @returns Tablero por columnas con tareas arrastrables y modal de detalle.
+ */
+const KanbanApertura: React.FC<Props> = ({project, responsablesMap, fases,}) => {
+  const graph = useGraphServices();
+  const projectTasks = useTasks(graph.tasks);
 
-const KanbanApertura: React.FC<Props> = ({project, responsablesMap, onCreateTask, onAlert, fases}) => {
-  const { tasks, proyectos} = useGraphServices();
-  const { task: rows, estado, search, responsable, loading,
-    loadProyecTasks, setEstado, setResponsable, setSearch, updateTaskPhase, searchPredecessor, searchSuccesor, selfAssign, setComplete } = useTasks(tasks);
-  const { updatePorcentaje } = useProjects(proyectos);
-  const [detalles, setDetalles] = React.useState<boolean>(false)
-  const [selectedTask, setSelectedTask] = React.useState<TaskApertura | null>(null)
-  const [predesesor, setPredecesor] = React.useState<TaskApertura | null>(null)
-  const [sucessors, setSurcessors] = React.useState<TaskApertura[]>([])
+  const [detalles, setDetalles] = React.useState<boolean>(false);
+  const [selectedTask, setSelectedTask] = React.useState<projectTasks | null>(null);
+  const [predesesor, setPredecesor] = React.useState<projectTasks | null>(null);
+  const [sucessors, setSurcessors] = React.useState<projectTasks[]>([]);
+  const [respByTaskId, setRespByTaskId] = React.useState<Record<string, taskResponsible[]>>({});
+  const [respLoading, setRespLoading] = React.useState(false);
 
-  // cuando cambien las tareas (o el proyecto), reseteamos
+  const handleDrop = (ev: React.DragEvent<HTMLDivElement>, targetPhase: string, projectId: string) => {
+    ev.preventDefault();
+    const id = ev.dataTransfer.getData("text/plain");
+    if (!id) return;
+
+    void projectTasks.updateTaskPhase(id, targetPhase, projectId);
+  };
+
+  // Cargar tareas cuando cambien filtros/proyecto
   React.useEffect(() => {
-    loadProyecTasks(project.Id ?? "")
-  }, [tasks, project.Id, estado, search, responsable,]);
+    void projectTasks.loadProjectTasks(project.Id ?? "");
+  }, [project.Id, projectTasks.filters.search, projectTasks.filters.responsable, projectTasks.filters.soloIncompletas,]);
 
+  // Cargar responsables del proyecto cuando cambien las tareas o el proyecto
   React.useEffect(() => {
-    if (!selectedTask) {
-      setPredecesor(null);
-      return;
-    }
+    let cancelled = false;
 
-    if (!selectedTask.Dependencia) {
+    (async () => {
+      const pid = project.Id ?? "";
+      if (!pid) return;
+
+      setRespLoading(true);
+
+      try {
+        const ids = (projectTasks.tasks ?? []).map((t) => String(t.Id ?? "").trim()).filter(Boolean);
+
+        if (!ids.length) {
+          if (!cancelled) setRespByTaskId({});
+          return;
+        }
+
+        const CHUNK = 20;
+        const map: Record<string, taskResponsible[]> = {};
+
+        
+
+        /**
+         * Construye un filtro OData para consultar responsables por grupos de tareas.
+         *
+         * @param values - Identificadores de tarea incluidos en la consulta.
+         * @returns Filtro combinado con clausulas `or`.
+         */
+        const buildOrFilter = (values: string[]) => values.map((v) => `fields/IdTarea eq '${v}'`).join(" or ");
+
+        for (let i = 0; i < ids.length; i += CHUNK) {
+          const part = ids.slice(i, i + CHUNK);
+          const filter = buildOrFilter(part);
+
+          const rows = await graph.responsableProyecto.getAll({filter, top: 10000,});
+
+          for (const r of rows.items ?? []) {
+            const taskId = String((r as any).IdTarea ?? "").trim();
+            if (!taskId) continue;
+            if (!map[taskId]) map[taskId] = [];
+            map[taskId].push(r);
+          }
+        }
+
+        if (!cancelled) setRespByTaskId(map);
+      } catch (e: any) {
+        if (!cancelled) {
+          setRespByTaskId({});
+        }
+      } finally {
+        if (!cancelled) setRespLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [project.Id, projectTasks.tasks, graph]);
+
+  // Predecesor y sucesores cuando cambie la tarea seleccionada
+  React.useEffect(() => {
+    if (!selectedTask?.Id) {
       setPredecesor(null);
+      setSurcessors([]);
       return;
     }
 
     let cancelled = false;
 
     (async () => {
-      const predecessorTask = await searchPredecessor(selectedTask.Dependencia || "");
-      const sucessorsTasks = await searchSuccesor(selectedTask.Codigo || "");
-      
+      const predecessorTask = selectedTask.Dependencia ? await projectTasks.getPredecessorByCodigo(selectedTask.Dependencia || "", selectedTask.IdProyecto) : null;
+
+      const sucessorsTasks = await projectTasks.getSuccessorsByCodigo(selectedTask.Codigo || "", selectedTask.IdProyecto);
+
       if (!cancelled) {
         setPredecesor(predecessorTask);
         setSurcessors(sucessorsTasks);
@@ -67,158 +137,60 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, onCreateTask
     return () => {
       cancelled = true;
     };
-  }, [selectedTask, searchPredecessor]);
-
-  const handleAssignToMe = React.useCallback(
-  async (task: TaskApertura) => {
-    await selfAssign(task.Id!);
-    await loadProyecTasks(task.IdProyecto!);  // refresca MIS rows
-  },
-  [selfAssign, loadProyecTasks]
-  );
-
-  const handleCompleteTask = React.useCallback(
-    async (task: TaskApertura) => {
-      const data = await setComplete(task);
-      if (data.ok) {
-        await updatePorcentaje(task.IdProyecto!, data.percent);
-      }
-      await loadProyecTasks(task.IdProyecto!);  // refresca MIS rows
-    },
-    [setComplete, updatePorcentaje, loadProyecTasks]
-  );
-
-  const getTaskById = React.useCallback(
-    (id?: string | null) =>
-      id ? rows.find((t) => String(t.Id) === id || t.Id === id) ?? null : null,
-    [rows]
-  );
-
-  /* ========= DUE DATE ========= */
-
-  function getDueInfo(task: TaskApertura) {
-    if (task.Estado === "Completada" || !task.FechaResolucion) {
-      return { dotClass: "kb-due-dot--neutral", label: "" };
-    }
-
-    const today = new Date();
-    const due = new Date(task.FechaResolucion);
-    const diffDays = Math.round(
-      (due.getTime() - today.getTime()) / MS_PER_DAY
-    );
-
-    if (diffDays < 0) {
-      return { dotClass: "kb-due-dot--over", label: "Vencido" };
-    }
-    if (diffDays <= 7) {
-      return { dotClass: "kb-due-dot--soon", label: "Próximo" };
-    }
-    return { dotClass: "kb-due-dot--ok", label: "A tiempo" };
-  }
-
-  /* ========= DRAG & DROP ========= */
-
-  const handleDragStart = (ev: React.DragEvent<HTMLDivElement>, task: TaskApertura) => {
-    // si tiene dependencia, valida que la predecesora esté "Completada"
-    if (task.Dependencia) {
-      const parent = getTaskById(task.Dependencia);
-      const blocked = !parent || parent.Estado !== "Completada";
-
-      if (blocked && task.Estado !== "Completada") {
-        ev.preventDefault();
-        const msg = `Tarea BLOQUEADA: "${task.Title}" depende de que "${
-          parent ? parent.Title : task.Dependencia
-        }" esté en estado "Completada".`;
-        onAlert ? onAlert(msg) : window.alert(msg);
-        return;
-      }
-    }
-
-    ev.dataTransfer.setData("text/plain", String(task.Id));
-    ev.currentTarget.classList.add("kb-task--dragging");
-  };
-
-  const handleDragEnd = (ev: React.DragEvent<HTMLDivElement>) => {
-    ev.currentTarget.classList.remove("kb-task--dragging");
-  };
+  }, [selectedTask, detalles,]);
 
   const handleDragOver = (ev: React.DragEvent<HTMLDivElement>) => {
     ev.preventDefault();
   };
 
-  const handleDrop = (ev: React.DragEvent<HTMLDivElement>, targetPhase: string,  projectId: string) => {
-    ev.preventDefault();
-    const id = ev.dataTransfer.getData("text/plain");
-    if (!id) return;
+  const handleClick = React.useCallback((t: projectTasks) => {
+    setSelectedTask(t);
+    setDetalles(true);
+  }, []);
 
-    updateTaskPhase(id, targetPhase, projectId, )
-  };
+  /* ========= RESPONSABLES (FILTRO + UI) ========= */
 
-  const handleClick = React.useCallback(async (task: TaskApertura) => {
-    setSelectedTask(task); 
-    setDetalles(true)
-  }, [searchPredecessor, tasks, selectedTask]);
+  const getTaskResponsables = React.useCallback(
+    (t: projectTasks) => respByTaskId[String(t.Id ?? "")] ?? [],
+    [respByTaskId]
+  );
 
-  /* ========= RENDER ========= */
+  const passesResponsableFilter = React.useCallback(
+    (t: projectTasks) => {
+      const selected = projectTasks.filters.responsable;
+      if (!selected || selected === "all") return true;
 
-  const allResponsablesKeys = Array.from(new Set(rows.map((t) => t.CorreoResponsable).filter(Boolean)));
+      const selectedMail = selected.toLowerCase().trim();
+      const resps = getTaskResponsables(t);
+      return resps.some((r) => (r.Correo ?? "").toLowerCase().trim() === selectedMail);
+    },
+    [projectTasks.filters.responsable, getTaskResponsables]
+  );
 
-  if(loading){
-    return (
-        <p>Cargando tareas del proyecto...</p>
-    )
-  }
+  if (projectTasks.loading) return <p>Cargando tareas del proyecto...</p>;
 
   return (
     <div className="kb-root">
-      {/* HEADER PROYECTO */}
-      <header className="kb-header">
-        <div>
-          <h1 className="kb-project-title">{project.Title}</h1>
-          <p className="kb-project-id">ID proyecto: {project.Id}</p>
-        </div>
-
-        <div className="kb-project-status">
-          <div className="kb-pill"><span>{project.Estado ?? "En curso"}</span></div>
-          <div className="kb-pill"><span>{project.Progreso ?? 0}%</span></div>
-          <div className="kb-pill"><span>{ParseDateShow(project.FechaInicio) ?? ""}</span></div>
-        </div>
-      </header>
-
-      {/* TOOLBAR */}
-      <section className="kb-toolbar">
-        <div className="kb-filter--search">
-          <input type="text" placeholder="Buscar tarea por nombre o código…" value={search} onChange={(e) => setSearch(e.target.value)} className="filter-text"/>
-        </div>
-
-        <div className="kb-filter">
-          <select value={responsable} onChange={(e) => setResponsable(e.target.value)}>
-            <option value="all">Todos los responsables</option>
-            {allResponsablesKeys.map((mail) => (
-              <option key={mail} value={mail}>
-                {responsablesMap?.[mail] ?? mail}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="kb-toolbar-right">
-          <label className="kb-toggle">
-            <input type="checkbox" checked={estado} onChange={() => {setEstado((v) => !v)}}/>
-            <span className="kb-toggle-slider" />
-            <span className="kb-toggle-label">Ver terminadas</span>
-          </label>
-
-          <button type="button" className="btn btn--primary" onClick={onCreateTask}>
-            + Tarea
-          </button>
-        </div>
-      </section>
+      <KanbanHeader 
+        project={project}
+        filters={{
+          search: projectTasks.filters.search,
+          setSearch: (s: string) => { projectTasks.setFilters({ ...projectTasks.filters, search: s }); },
+          responsable: projectTasks.filters.responsable,
+          setResponsable: (r: string) => { projectTasks.setFilters({ ...projectTasks.filters, responsable: r }); },
+          soloIncompletas: projectTasks.filters.soloIncompletas,
+          setSoloIncompletas: (i: boolean) => { projectTasks.setFilters({ ...projectTasks.filters, soloIncompletas: i }); }
+        }}
+        loading={respLoading}
+        respByTaskId={respByTaskId} 
+        responsablesMap={responsablesMap}/>
 
       {/* BOARD */}
       <section className="kb-board">
         {fases.map((phase) => {
-          const tasksInPhase = rows.filter((t) => t.Phase.toLowerCase().trim() === phase.name.toLowerCase());
+          const tasksInPhase = (projectTasks.tasks ?? [])
+            .filter((t) => normalize(t.Phase) === normalize(phase.name))
+            .filter(passesResponsableFilter);
 
           return (
             <div key={phase.name} className="kanban-column">
@@ -228,71 +200,19 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, onCreateTask
               </header>
 
               <div className="kb-column-body" onDragOver={handleDragOver} onDrop={(ev) => handleDrop(ev, phase.name, project.Id ?? "")}>
-                {tasksInPhase.map((task) => {
-                  const isCritical = task.TipoTarea === "Critica";
-                  const parent = getTaskById(task.Dependencia ?? undefined);
-                  const isBlocked =
-                    !!task.Dependencia &&
-                    (!parent || parent.Estado !== "Completada");
-
-                  let borderClass = "kb-task--normal";
-                  if (task.Estado === "Completada") borderClass = "kb-task--done";
-                  else if (task.Estado === "En Proceso")
-                    borderClass = "kb-task--in-progress";
-                  if (isCritical && task.Estado !== "Completada")
-                    borderClass = "kb-task--critical";
-
-                  const dueInfo = getDueInfo(task);
-                  const respLabel =
-                    responsablesMap?.[task.CorreoResponsable] ??
-                    task.Responsable;
-
-                  return (
-                    <div key={task.Id} id={String(task.Id)} className={`kanban-task ${borderClass}`} onClick={() => {handleClick(task)}} draggable onDragStart={(ev) => handleDragStart(ev, task)} onDragEnd={handleDragEnd} onDragOver={handleDragOver}>
-                      <div className="kb-task-header">
-                        <p className="kb-task-title">
-                          <span className="kb-task-id">
-                            [{task.Codigo || task.Id}]
-                          </span>
-                          {task.Title}
-                        </p>
-                      </div>
-
-                      <p className="kb-task-resp">
-                        Responsable:{" "}
-                        <span className="badge-resp">{respLabel}</span>
-                      </p>
-
-                      <div className="kb-task-footer">
-                        <div>
-                          {isBlocked && (
-                            <span className="chip-blocked">BLOQUEADA</span>
-                          )}
-                          {isCritical && !isBlocked && (
-                            <span className="chip-blocked" style={{ backgroundColor: "#b91c1c" }}>
-                              CRÍTICA
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="kb-task-due">
-                          <span className="kb-task-due-date">
-                            {ParseDateShow(task.FechaResolucion) || "Sin fecha"}
-                          </span>
-                          <span
-                            className={`due-dot ${dueInfo.dotClass}`}
-                            title={dueInfo.label}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                {tasksInPhase.map((task) => (
+                  <KanbanCard 
+                    task={task} 
+                    tasks={tasksInPhase} 
+                    onClick={handleClick} 
+                    respByTaskId={respByTaskId} 
+                    key={task.Id}
+                    responsablesMap={responsablesMap}
+                  />
+                ))}
 
                 {tasksInPhase.length === 0 && (
-                  <div className="kb-column-empty">
-                    Sin tareas en esta fase.
-                  </div>
+                  <div className="kb-column-empty">Sin tareas en esta fase.</div>
                 )}
               </div>
             </div>
@@ -300,7 +220,19 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, onCreateTask
         })}
       </section>
 
-      <TaskDetailModal open={detalles} task={selectedTask} phases={fases} onClose={() => setDetalles(false)} predecessor={predesesor} successors={sucessors} onGoToTask={(task: TaskApertura) => { setSelectedTask(task); } } onAssignToMe={handleAssignToMe} onCompleteTask={handleCompleteTask}/>
+      <TaskDetailModal
+        open={detalles}
+        task={selectedTask}
+        phases={fases}
+        onClose={() => setDetalles(false)}
+        predecessor={predesesor}
+        successors={sucessors}
+        onGoToTask={(t: projectTasks) => setSelectedTask(t)}
+        onCompleteTask={projectTasks.handleCompleteTask}
+        sending={projectTasks.loading}
+        returnTask={projectTasks.returnTask} 
+        blockTask={projectTasks.blockOrUnblockByUser}      
+        />
     </div>
   );
 };

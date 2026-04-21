@@ -3,8 +3,8 @@ import * as React from "react";
 import "./AsignacionRecursos.css";
 import type { ProjectSP } from "../../models/Projects";
 import { useGraphServices } from "../../graph/graphContext";
-import { useTasks } from "../../Funcionalidades/Tasks";
-import type { TaskApertura } from "../../models/AperturaTienda";
+import type { projectTasks, taskResponsible } from "../../models/AperturaTienda";
+import { useTasks } from "../../Funcionalidades/ProjectTasksHooks/useProjectTasks";
 
 export type ResourceLoadRow = {
   name: string;
@@ -17,121 +17,277 @@ type ResourceAllocationProps = {
   project: ProjectSP;
 };
 
-// Construye las filas a partir de las tareas y los IDs de la ruta crítica
-function buildRowsFromTasks(tasks: TaskApertura[], CRITICAL_PATH_IDS: string[]): ResourceLoadRow[] {
+/**
+ * Normaliza un correo para usarlo como clave de agregacion.
+ *
+ * @param s - Correo a normalizar.
+ * @returns Correo en minusculas y sin espacios.
+ */
+const normMail = (s?: string | null) => (s ?? "").trim().toLowerCase();
+
+/**
+ * Construye las filas a partir de:
+ * - tasks del proyecto (ProjectTasks)
+ * - codigos de ruta critica (criticalCodes)
+ * - responsables por tarea (ResponsableTarea -> map taskId -> responsables[])
+ *
+ * Nota: Aqui usamos "full count": si una tarea tiene 2 responsables, cuenta 1 para cada uno.
+ */
+function buildRowsFromTasks(tasks: projectTasks[], criticalCodes: string[], responsablesByTaskId: Record<string, taskResponsible[]>): ResourceLoadRow[] {
   const totalProjectTasks = tasks.length;
-  if (totalProjectTasks === 0) return [];
+  if (!totalProjectTasks) return [];
 
   const map = new Map<string, { totalTasks: number; criticalTasks: number }>();
 
   for (const t of tasks) {
-    const key = t.Responsable || t.CorreoResponsable || "Sin responsable";
+    const taskId = String(t.Id ?? "").trim();
+    const responsables = taskId ? (responsablesByTaskId[taskId] ?? []) : [];
 
-    if (!map.has(key)) {
-      map.set(key, { totalTasks: 0, criticalTasks: 0 });
+    const isCritical = !!t.Codigo && criticalCodes.includes(t.Codigo);
+
+    if (!responsables.length) {
+      const key = "Sin responsable";
+      if (!map.has(key)) map.set(key, { totalTasks: 0, criticalTasks: 0 });
+      const agg = map.get(key)!;
+      agg.totalTasks += 1;
+      if (isCritical) agg.criticalTasks += 1;
+      continue;
     }
 
-    const agg = map.get(key)!; 
-    agg.totalTasks++;
+    for (const r of responsables) {
+      const key = (r.Title ?? "").trim() || normMail(r.Correo) || "Sin responsable";
 
-    const baseCode = t.Codigo;
-    if (baseCode && CRITICAL_PATH_IDS.includes(baseCode)) {
-      agg.criticalTasks++;
+      if (!map.has(key)) map.set(key, { totalTasks: 0, criticalTasks: 0 });
+      const agg = map.get(key)!;
+      agg.totalTasks += 1;
+      if (isCritical) agg.criticalTasks += 1;
     }
   }
 
   const rows: ResourceLoadRow[] = [];
-  map.forEach((agg, name) => {const loadPercent = Math.round((agg.totalTasks / totalProjectTasks) * 100);
-
+  map.forEach((agg, name) => {
+    const loadPercent = Math.round((agg.totalTasks / totalProjectTasks) * 100);
     rows.push({
       name,
-      totalTasks: agg.totalTasks,
-      criticalTasks: agg.criticalTasks,
+      totalTasks: Math.round(agg.totalTasks),
+      criticalTasks: Math.round(agg.criticalTasks),
       loadPercent,
     });
   });
 
+  rows.sort((a, b) => b.loadPercent - a.loadPercent);
   return rows;
 }
 
-export const ResourceAllocation: React.FC<ResourceAllocationProps> = ({project,}) => {
-    const { tasks } = useGraphServices();
-    const { loadProyecTasks, task: tareas, getCritialPaths } = useTasks(tasks);
+/**
+ * Muestra la distribucion de carga por responsable dentro del proyecto.
+ *
+ * @param props - Proyecto sobre el que se calcula la asignacion.
+ * @returns Tabla con tareas asignadas, criticidad y porcentaje de carga.
+ */
+export const ResourceAllocation: React.FC<ResourceAllocationProps> = ({ project }) => {
+  const graph = useGraphServices();
 
-    const [criticalPathsIds, setCriticalPathsIds] = React.useState<string[]>([]);
+  // tasks hook
+  const { loadProjectTasks, tasks: projectTasksList, critical } = useTasks(graph.tasks);
 
-    // Carga tareas + ruta crítica del proyecto
-    React.useEffect(() => {
-        if (!project.Id) return;
+  // ruta critica
+  const [criticalCodes, setCriticalCodes] = React.useState<string[]>([]);
 
-        let cancel = false;
+  // responsables por tarea
+  const [respByTaskId, setRespByTaskId] = React.useState<Record<string, taskResponsible[]>>({});
+  const [respLoading, setRespLoading] = React.useState(false);
+  const [respError, setRespError] = React.useState<string | null>(null);
 
-        (async () => {
-            await loadProyecTasks(project.Id!);
-            if (cancel) return;
+  // clave estable basada en los IDs de las tareas para evitar loops
+  const tasksKey = React.useMemo(() => {
+    const ids = (projectTasksList ?? [])
+      .map((t) => String(t.Id ?? "").trim())
+      .filter(Boolean)
+      .sort();
+    return ids.join("|");
+  }, [projectTasksList]);
 
-            const crit = await getCritialPaths(project.Id!);
-            if (cancel) return;
+  // referencia directa al service (mas estable que depender de "graph" completo)
+  const responsableSvc = graph.responsableProyecto;
 
-            setCriticalPathsIds(crit ?? []);
-        })();
+  /* ==========================
+     1) Cargar tareas + ruta critica
+     - Depende SOLO del project.Id y loadProjectTasks
+  ========================== */
+  React.useEffect(() => {
+    const pid = project.Id;
+    if (!pid) return;
 
-        return () => {
-        cancel = true;
-        };
-    }, [loadProyecTasks, getCritialPaths, project.Id]);
+    let cancel = false;
 
-    // Construir rows en base a las tareas y la ruta crítica
-    const rows = React.useMemo(
-        () => buildRowsFromTasks(tareas as TaskApertura[], criticalPathsIds),
-        [tareas, criticalPathsIds]
-    );
+    (async () => {
+      await loadProjectTasks(pid);
+      if (cancel) return;
 
-    const getBadgeClass = (loadPercent: number) => {
-        if (loadPercent >= 60) return "resource-allocation__load-badge--high";
-        if (loadPercent >= 30) return "resource-allocation__load-badge--medium";
-        return "resource-allocation__load-badge--low";
+      // OJO: no metemos critical/getCriticalCodes en deps para evitar loops por referencia
+      const crit = await critical.getCriticalCodes(pid);
+      if (cancel) return;
+
+      setCriticalCodes(crit ?? []);
+    })();
+
+    return () => {
+      cancel = true;
     };
+  }, [project.Id, loadProjectTasks]);
 
-    return (
-        <section className="resource-allocation">
-            <header className="resource-allocation__header">
-                <h1 className="resource-allocation__title">Asignación de Recursos</h1>
-                <p className="resource-allocation__subtitle">Visualización de la carga de trabajo por recurso en el proyecto {project.Title}</p>
-            </header>
+  /* ==========================
+     2) Cargar responsables del proyecto basado en tasksKey
+     - Evita bucles aunque projectTasksList cambie de referencia
+  ========================== */
+  React.useEffect(() => {
+    const pid = project.Id;
+    if (!pid) return;
 
-            <div className="resource-allocation__card">
-                <table className="resource-allocation__table">
-                    <thead className="resource-allocation__table-head">
-                        <tr>
-                            <th className="resource-allocation__th">Responsable</th>
-                            <th className="resource-allocation__th">Total Tareas Asignadas</th>
-                            <th className="resource-allocation__th">Tareas Críticas</th>
-                            <th className="resource-allocation__th">Carga de Trabajo (%)</th>
-                        </tr>
-                    </thead>
-                    <tbody className="resource-allocation__table-body">
-                        {rows.map((row) => (
-                            <tr key={row.name} className="resource-allocation__row">
-                                <td className="resource-allocation__cell resource-allocation__cell--primary">{row.name}</td>
-                                <td className="resource-allocation__cell">{row.totalTasks}</td>
-                                <td className="resource-allocation__cell">{row.criticalTasks}</td>
-                                <td className="resource-allocation__cell">
-                                    <span className={"resource-allocation__load-badge " + getBadgeClass(row.loadPercent)}>{row.loadPercent}%</span>
-                                </td>
-                            </tr>
-                        ))}
+    const ids = tasksKey ? tasksKey.split("|").filter(Boolean) : [];
+    if (!ids.length) {
+      setRespByTaskId({});
+      return;
+    }
 
-                        {rows.length === 0 && (
-                            <tr className="resource-allocation__row">
-                                <td className="resource-allocation__cell" colSpan={4} style={{ textAlign: "center", fontStyle: "italic" }}>
-                                    No hay recursos asignados en este proyecto.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    );
+    let cancel = false;
+
+    (async () => {
+      setRespLoading(true);
+      setRespError(null);
+
+      try {
+        const CHUNK = 20;
+
+        /**
+         * Construye un filtro `or` para consultar responsables por lotes de tareas.
+         *
+         * @param values - Identificadores de tareas a incluir en el filtro.
+         * @returns Expresion OData compuesta.
+         */
+        const buildOrFilter = (values: string[]) =>
+          values.map((v) => `fields/IdTarea eq '${v}'`).join(" or ");
+
+        const map: Record<string, taskResponsible[]> = {};
+
+        for (let i = 0; i < ids.length; i += CHUNK) {
+          const part = ids.slice(i, i + CHUNK);
+          const filter = buildOrFilter(part);
+
+          const rows = await responsableSvc.getAll({
+            filter,
+            top: 10000,
+          });
+
+          for (const r of rows.items ?? []) {
+            const taskId = String((r as any).IdTarea ?? "").trim();
+            if (!taskId) continue;
+            (map[taskId] ||= []).push(r);
+          }
+        }
+
+        if (!cancel) setRespByTaskId(map);
+      } catch (e: any) {
+        if (!cancel) {
+          setRespByTaskId({});
+          setRespError(e?.message ?? "Error cargando responsables del proyecto");
+        }
+      } finally {
+        if (!cancel) setRespLoading(false);
+      }
+    })();
+
+    return () => {
+      cancel = true;
+    };
+  }, [project.Id, tasksKey, responsableSvc]);
+
+  /* ==========================
+     3) Construir rows (memo)
+  ========================== */
+  const rows = React.useMemo(
+    () => buildRowsFromTasks(projectTasksList as projectTasks[], criticalCodes, respByTaskId),
+    [projectTasksList, criticalCodes, respByTaskId]
+  );
+
+  /**
+   * Determina la clase visual del indicador de carga.
+   *
+   * @param loadPercent - Porcentaje de carga calculado.
+   * @returns Clase CSS asociada al rango de carga.
+   */
+  const getBadgeClass = (loadPercent: number) => {
+    if (loadPercent >= 60) return "resource-allocation__load-badge--high";
+    if (loadPercent >= 30) return "resource-allocation__load-badge--medium";
+    return "resource-allocation__load-badge--low";
+  };
+
+  return (
+    <section className="resource-allocation">
+      <header className="resource-allocation__header">
+        <h1 className="resource-allocation__title">Asignación de Recursos</h1>
+        <p className="resource-allocation__subtitle">
+          Visualización de la carga de trabajo por recurso en el proyecto {project.Title}
+        </p>
+        {respError ? (
+          <p className="resource-allocation__subtitle" style={{ color: "#b91c1c" }}>
+            {respError}
+          </p>
+        ) : null}
+      </header>
+
+      <div className="resource-allocation__card">
+        <table className="resource-allocation__table">
+          <thead className="resource-allocation__table-head">
+            <tr>
+              <th className="resource-allocation__th">Responsable</th>
+              <th className="resource-allocation__th">Total Tareas Asignadas</th>
+              <th className="resource-allocation__th">Tareas Críticas</th>
+              <th className="resource-allocation__th">Carga de Trabajo (%)</th>
+            </tr>
+          </thead>
+
+          <tbody className="resource-allocation__table-body">
+            {respLoading ? (
+              <tr className="resource-allocation__row">
+                <td className="resource-allocation__cell" colSpan={4} style={{ textAlign: "center" }}>
+                  Cargando responsables...
+                </td>
+              </tr>
+            ) : (
+              <>
+                {rows.map((row) => (
+                  <tr key={row.name} className="resource-allocation__row">
+                    <td className="resource-allocation__cell resource-allocation__cell--primary">
+                      {row.name}
+                    </td>
+                    <td className="resource-allocation__cell">{row.totalTasks}</td>
+                    <td className="resource-allocation__cell">{row.criticalTasks}</td>
+                    <td className="resource-allocation__cell">
+                      <span className={"resource-allocation__load-badge " + getBadgeClass(row.loadPercent)}>
+                        {row.loadPercent}%
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+
+                {rows.length === 0 && (
+                  <tr className="resource-allocation__row">
+                    <td
+                      className="resource-allocation__cell"
+                      colSpan={4}
+                      style={{ textAlign: "center", fontStyle: "italic" }}
+                    >
+                      No hay recursos asignados en este proyecto.
+                    </td>
+                  </tr>
+                )}
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
 };

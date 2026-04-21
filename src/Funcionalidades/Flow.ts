@@ -4,16 +4,31 @@ export type FlowInvokeOptions = {
   retries?: number;
 };
 
+/**
+ * Cliente ligero para invocar flujos HTTP externos.
+ */
 export class FlowClient {
-  private readonly flowUrl: string; 
+  private readonly flowUrl: string;
 
+  /**
+   * Inicializa una nueva instancia del cliente de flujos.
+   * @param flowUrl - URL absoluta del flujo a consumir.
+   */
   constructor(flowUrl: string) {
     if (!flowUrl || !/^https?:\/\//i.test(flowUrl)) {
-      throw new Error("FlowClient: URL inválida");
+      throw new Error("FlowClient: URL invÃ¡lida");
     }
-    this.flowUrl = flowUrl; 
+    this.flowUrl = flowUrl;
   }
 
+  /**
+   * Ejecuta una invocación POST al flujo configurado.
+   * @typeParam TIn - Tipo del payload enviado.
+   * @typeParam TOut - Tipo esperado en la respuesta.
+   * @param payload - Cuerpo JSON a enviar al flujo.
+   * @param opts - Configuración adicional de cabeceras, timeout y reintentos.
+   * @returns Respuesta del flujo parseada como JSON cuando aplica.
+   */
   async invoke<TIn extends object, TOut = unknown>(
     payload: TIn,
     opts: FlowInvokeOptions = {}
@@ -24,6 +39,10 @@ export class FlowClient {
       ...headers,
     };
 
+    /**
+     * Ejecuta un único intento de invocación.
+     * @returns Respuesta parseada del flujo.
+     */
     const tryOnce = async (): Promise<TOut> => {
       const ac = new AbortController();
       const id = setTimeout(() => ac.abort(), timeoutMs);

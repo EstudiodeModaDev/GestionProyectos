@@ -3,32 +3,52 @@ import "./App.css";
 import { AuthProvider, useAuth } from "./auth/authProvider";
 import { GraphServicesProvider } from "./graph/graphContext";
 import Welcome from "./Components/Landing/Welcome";
-import { Dashboard } from "./Components/Dashboard/Dashboard";
-import Desviation from "./Components/Desviacion/Desviacion";
-import type{ ProjectSP } from "./models/Projects";
-import KanbanApertura, { type KanbanPhase } from "./Components/kanban/Kanban";
-import { GanttView } from "./Components/GanttView/GanttView";
-import { ResourceAllocation } from "./Components/AsignacionRecursos/AsignacionRecursos";
-import { PlantillasPanel } from "./Components/Settings/Settings";
+import { Sidebar } from "./Components/Sidebar/Sidebar";
+import { useLocation, useNavigate } from "react-router-dom";
+import AppRoutes from "./routes";
+import type { ProjectSP } from "./models/Projects";
 
-type View = "dashboard" | "kanban" | "gantt" | "resource" | "analysis" | "settings"
+/**
+ * Vistas principales disponibles dentro de la aplicacion autenticada.
+ *
+ * Este tipo se usa para representar las secciones funcionales que el usuario
+ * puede consultar desde la navegacion principal
+ */
+export type View = "dashboard" | "kanban" | "gantt" | "resource" | "analysis" | "settings"
 
-const fasesAperturaTienda: KanbanPhase[] = [
-  {id: 1, name: "Planificación y concepto"},
-  {id: 2, name: "Diseño y construcción"},
-  {id: 3, name: "Adquisiciones y Contratación"},
-  {id: 4, name: "Pre-Apertura y Marketing"},
-  {id: 5, name: "Apertura y Cierre"},
-]
-
-/* ============================================================
-   Shell: controla autenticación básica y muestra LoggedApp
-   ============================================================ */
-function Shell() {
+/**
+ * Controla la entrada principal de la aplicacion segun el estado de autenticacion.
+ *
+ * Este componente consulta el contexto de autenticacion para saber si la
+ * aplicacion ya termino de inicializarse, si existe una cuenta activa y cual
+ * debe ser la accion del boton de acceso. Mientras el usuario no haya iniciado
+ * sesion, muestra la pantalla de bienvenida con la accion de login. Cuando la
+ * sesion esta disponible, delega la interfaz completa a {@link LoggedApp}.
+ *
+ * Tambien protege el flujo de autenticacion con un estado local para evitar
+ * que se disparen varios inicios o cierres de sesion al mismo tiempo.
+ *
+ * @returns La pantalla de bienvenida o la aplicacion autenticada segun el
+ * estado actual de la sesion.
+ */
+export function Shell() {
   const { ready, account, signIn, signOut } = useAuth();
   const [loadingAuth, setLoadingAuth] = React.useState(false);
   const isLogged = Boolean(account);
 
+  /**
+   * Ejecuta la accion de autenticacion correspondiente al estado actual.
+   *
+   * Si la aplicacion aun no termino de inicializar la autenticacion o si ya hay
+   * una operacion en curso, la funcion termina sin hacer nada. En caso
+   * contrario, abre el flujo de inicio de sesion en modo popup cuando no hay un
+   * usuario autenticado, o cierra la sesion activa cuando ya existe una cuenta.
+   *
+   * El estado `loadingAuth` se usa como candado para evitar dobles clics y se
+   * restablece incluso si la operacion falla.
+   *
+   * @returns Una promesa que se resuelve cuando finaliza el login o logout.
+   */
   const handleAuthClick = async () => {
     if (!ready || loadingAuth) return;
     setLoadingAuth(true);
@@ -53,117 +73,62 @@ function Shell() {
   return <LoggedApp/>;
 }
 
-/* ============================================================
-   Sidebar
-   ============================================================ */
-function Sidebar({activeView, onChangeView, collapsed, onToggleCollapse, project}: { activeView: View, onChangeView: (view: View) => void, collapsed: boolean, onToggleCollapse: () => void, project: ProjectSP | null}) {
-  const getNavItemClass = (view: View) => ["sidebar__nav-item", activeView === view ? "sidebar__nav-item--active" : "",].filter(Boolean).join(" ");
-  const getPrimaryBtnClass = (view: View) => ["sidebar__primary-btn", activeView === view ? "sidebar__primary-btn--active" : "",].filter(Boolean).join(" ");
+/**
+ * Renderiza la experiencia principal para usuarios autenticados.
+ *
+ * Este componente mantiene el estado visual del layout protegido, como el
+ * colapso del sidebar y el proyecto actualmente seleccionado. Ademas, observa
+ * la ruta actual para redirigir automaticamente desde `/` hacia
+ * `/dashboard`, garantizando que la aplicacion siempre cargue una vista valida.
+ *
+ * La seleccion del proyecto se comparte entre el sidebar y el arbol de rutas
+ * para que ambas zonas trabajen sobre el mismo contexto funcional.
+ *
+ * @returns El contenedor principal con sidebar, area de contenido y rutas
+ * internas de la aplicacion.
+ */
+export function LoggedApp() {
+  const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const [selectedProject, setSelectedProject ] = React.useState<null | ProjectSP>(null)
 
-    return (
-      <div id="sidebar" className={collapsed ? "sidebar sidebar--collapsed" : "sidebar sidebar--expanded"}>
+  const navigate = useNavigate();
+  const location = useLocation();
 
-        <button className="sidebar__toggle-btn" onClick={onToggleCollapse}>
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" className="sidebar__toggle-icon" id="sidebarToggleIcon">
-            {collapsed ? (
-            // Flecha hacia la derecha
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-            ) : (
-            // Flecha hacia la izquierda
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-            )}
-          </svg>
-        </button>
-
-        <div className="sidebar__header">
-          <span className="sidebar__brand">PMO</span>
-          <span className="sidebar__title sidebar__text">Aperturas</span>
-        </div>
-
-        <nav className="sidebar__nav">
-          <a id="nav-dashboard" className={getNavItemClass("dashboard")} onClick={() => onChangeView("dashboard")}>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" className="sidebar__nav-icon">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.414-.414 1.087-.414 1.501 0l8.955 8.955c.16.16.242.378.242.597v8.948c0 .414-.336.75-.75.75h-8.955c-.16 0-.319-.064-.434-.179l-8.955-8.955c-.16-.16-.242-.378-.242-.597v-8.948c0-.414.336-.75.75-.75z"></path>
-            </svg>
-            <span className="sidebar__nav-label sidebar__text">Dashboard</span>
-          </a>
-
-          <a id="nav-dashboard" className={getNavItemClass("settings")} onClick={() => onChangeView("settings")}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 416 432">
-              <path fill="#ffffff" d="m366 237l45 35q7 6 3 14l-43 74q-4 8-13 4l-53-21q-18 13-36 21l-8 56q-1 9-11 9h-85q-9 0-11-9l-8-56q-19-8-36-21l-53 21q-9 3-13-4L1 286q-4-8 3-14l45-35q-1-12-1-21t1-21L4 160q-7-6-3-14l43-74q5-8 13-4l53 21q18-13 36-21l8-56q2-9 11-9h85q10 0 11 9l8 56q19 8 36 21l53-21q9-3 13 4l43 74q4 8-3 14l-45 35q2 12 2 21t-2 21zm-158.5 54q30.5 0 52.5-22t22-53t-22-53t-52.5-22t-52.5 22t-22 53t22 53t52.5 22z"/>
-            </svg>
-            <span className="sidebar__nav-label sidebar__text">Configuracion</span>
-          </a>
-
-          <hr className="sidebar__divider"/>
-
-          <div id="activeProjectDisplay" className="sidebar__project sidebar__text">Proyecto: {project?.Title ?? "No hay seleccionado"}</div> 
-          
-          {project ?
-            <div className="sidebar__primary-actions">
-              <button id="nav-kanban" className={getPrimaryBtnClass("kanban")} onClick={() => onChangeView("kanban")}>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" className="sidebar__nav-icon">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"></path>
-                </svg>
-                <span className="sidebar__nav-label sidebar__text">Fases</span>
-              </button> 
-
-              <button id="nav-gantt" className={getPrimaryBtnClass("gantt")} onClick={() => onChangeView("gantt")}>
-                <svg xmlns="http://www.w3.org/2000/svg" className="sidebar__nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="sidebar__nav-label sidebar__text">Cronograma</span>
-              </button> 
-
-              <button id="nav-resource" className={getPrimaryBtnClass("resource")} onClick={() => onChangeView("resource")}>
-                <svg xmlns="http://www.w3.org/2000/svg" className="sidebar__nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <span className="sidebar__nav-label sidebar__text">Asignación Recursos</span>
-              </button>
-          
-            </div> : null
-          }
-      </nav>
-
-      <div className="sidebar__footer sidebar__text">
-        Project Manager EDM.
-      </div>
-    </div>
-
-  );
-}
-
-/* ============================================================
-   LoggedApp: sidebar + header + contenido
-   ============================================================ */
-
-function LoggedApp() {
-  const [isCollapsed, setIsCollapsed] = React.useState<boolean>(false)
-  const [activeView, setActiveView] = React.useState<View>("dashboard")
-  const [selectedProject, setSelectedProject] = React.useState<ProjectSP | null>(null)
+  /**
+   * Redirige la ruta raiz hacia el dashboard.
+   *
+   * Este efecto evita que un usuario autenticado quede en una ruta vacia y
+   * fuerza una vista inicial consistente cuando entra a la aplicacion.
+   */
+  React.useEffect(() => {
+    if (location.pathname === "/" || location.pathname==="/home") {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [location.pathname, navigate]);
 
   return (
-    <div className={`gd-layout is-collapsed`}>
-      <Sidebar activeView={activeView} onChangeView={setActiveView} collapsed={isCollapsed} onToggleCollapse={() => setIsCollapsed(prev => !prev)} project={selectedProject}/>
-      <main className="gd-main">        
+    <div className="gd-layout is-collapsed">
+      <Sidebar collapsed={isCollapsed} onToggleCollapse={() => setIsCollapsed((prev) => !prev)} project={selectedProject} />
+
+      <main className="gd-main">
         <section className="gd-content">
-          {activeView === "dashboard" ? <Dashboard onOpenProjectKanban={(project:ProjectSP) => {setSelectedProject(project); setActiveView("kanban");}} onShowPostClosureAnalysis={(project:ProjectSP) => {setSelectedProject(project); setActiveView("analysis");}}/> : 
-          activeView === "analysis" ? <Desviation project={selectedProject!} onBack={() => setActiveView("dashboard")}/> : 
-          activeView === "kanban" ? <KanbanApertura project={selectedProject!} fases={fasesAperturaTienda}></KanbanApertura> :
-          activeView === "gantt" ? <GanttView project={selectedProject!} ></GanttView> :
-          activeView === "resource" ? <ResourceAllocation project={selectedProject!} ></ResourceAllocation> : 
-          activeView === "settings" ? <PlantillasPanel plantillas={[{id: "1", nombre: "Apertura de tiendas", codigo: "apertura", tareasListName: "Tareas Apertura Tienda"}]} ></PlantillasPanel> : null}
+          <AppRoutes setSelectedProject={setSelectedProject} project={selectedProject}/>
         </section>
       </main>
     </div>
   );
 }
 
-/* ============================================================
-   App root y gate de servicios
-   ============================================================ */
-
+/**
+ * Compone la raiz de la aplicacion y registra los proveedores globales.
+ *
+ * Primero envuelve toda la aplicacion con {@link AuthProvider} para que el
+ * estado de autenticacion este disponible en cualquier componente. Luego usa
+ * {@link GraphServicesGate} para habilitar los servicios de Microsoft Graph
+ * solo cuando la sesion del usuario ya esta lista.
+ *
+ * @returns El arbol base de providers junto con el componente {@link Shell}.
+ */
 export default function App() {
   return (
     <AuthProvider>
@@ -174,7 +139,21 @@ export default function App() {
   );
 }
 
-function GraphServicesGate({ children }: { children: React.ReactNode }) {
+/**
+ * Activa el proveedor de servicios de Graph solo cuando existe una sesion valida.
+ *
+ * Este componente funciona como una compuerta condicional para evitar montar
+ * {@link GraphServicesProvider} antes de que el contexto de autenticacion tenga
+ * un usuario disponible. Si la autenticacion aun no esta lista o no hay cuenta
+ * activa, simplemente renderiza a sus hijos sin envolverlos.
+ *
+ * @param props Propiedades del componente.
+ * @param props.children Contenido que se renderiza dentro o fuera del proveedor
+ * de Graph segun el estado de autenticacion.
+ * @returns Los hijos envueltos por el proveedor de Graph cuando existe una
+ * sesion activa, o los mismos hijos sin proveedor en caso contrario.
+ */
+export function GraphServicesGate({ children }: { children: React.ReactNode }) {
   const { ready, account } = useAuth();
   if (!ready || !account) return <>{children}</>;
   return <GraphServicesProvider>{children}</GraphServicesProvider>;
