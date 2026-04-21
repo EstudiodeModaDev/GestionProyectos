@@ -15,7 +15,7 @@ export class ResponsableTareaProyectoService extends BaseSharePointListService<t
       graph,
       "estudiodemoda.sharepoint.com",
       "/sites/TransformacionDigital/IN/Test",
-      "Apertura Tiendas - Responsable Regla Tarea Detalle"
+      "Apertura Tiendas - Responsable Tarea Proyecto"
     );
   }
 
