@@ -14,10 +14,10 @@ export function useReglasFlujo() {
    * @returns Reglas de flujo asociadas a la tarea.
    */
   const getRulesByTask = async (templateTaskId: string): Promise<ReglasFlujoTareas[]> => {
-    const reglas = await graph.reglasFlujo.getAll({
+    const reglas = (await graph.reglasFlujo.getAll({
       filter: `fields/IdTemplateTaskOrigen eq '${templateTaskId}'`,
       top: 500,
-    });
+    })).items;
 
     return reglas;
   };

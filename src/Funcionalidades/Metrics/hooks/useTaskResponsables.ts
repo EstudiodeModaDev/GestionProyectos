@@ -33,7 +33,7 @@ export function useTaskResponsables(taskIds: string[]) {
 
         for (const ids of chunk(taskIds, 20)) {
           const filter = ids.map((id) => `fields/IdTarea eq '${id}'`).join(" or ");
-          const rows = await graph.responsableProyecto.getAll({ filter, top: 10000 });
+          const rows = (await graph.responsableProyecto.getAll({ filter, top: 10000 })).items;
 
           for (const row of rows) {
             const taskId = String(row.IdTarea ?? "").trim();

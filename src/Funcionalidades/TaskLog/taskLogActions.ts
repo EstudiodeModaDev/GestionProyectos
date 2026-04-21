@@ -51,7 +51,7 @@ export async function loadTaskLog(
   service: ReturnType<typeof useGraphServices>,
 ): Promise<{data: LogTarea[], error: string | null}> {
   try {
-    const logs = await service.logTarea.getAll({ filter: `fields/IdTarea eq ${taskId}` });
+    const logs = (await service.logTarea.getAll({ filter: `fields/IdTarea eq ${taskId}` })).items;
     return {
       data: logs,
       error: null

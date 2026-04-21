@@ -20,7 +20,7 @@ export function useFlowRulesSettings() {
     setLoading(true);
     setError(null);
     try {
-      const items = await graph.reglasFlujo.getAll({ top: 5000 });
+      const items = (await graph.reglasFlujo.getAll({ top: 5000 })).items;
       setReglas(items);
       return items;
     } catch (e) {

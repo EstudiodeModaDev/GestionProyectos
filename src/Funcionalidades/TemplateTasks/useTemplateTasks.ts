@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { TemplateTasks } from "../../models/AperturaTienda";
-import type { AperturaTiendaService } from "../../services/TemplateTasks.service";
+import type { TemplateTaskService } from "../../services/TemplateTasks.service";
 import { useTemplateTasksRepository } from "./useTemplateTasksRepository";
 import { useAsyncStatus } from "../commons/useAsyncStatus";
 import { useTemplateForm } from "./useTemplateTaksForm";
@@ -11,7 +11,7 @@ import { useTemplateTasksModification } from "./useTemplateTasksModification";
  * @param templateTasksSvc - Servicio de acceso a tareas plantilla.
  * @returns Estado, formulario y operaciones principales del módulo.
  */
-export function useTemplateTaks(templateTasksSvc: AperturaTiendaService) {
+export function useTemplateTaks(templateTasksSvc: TemplateTaskService) {
   const repo = useTemplateTasksRepository(templateTasksSvc);
   const listStatus = useAsyncStatus();
   const status = useAsyncStatus();
@@ -22,11 +22,15 @@ export function useTemplateTaks(templateTasksSvc: AperturaTiendaService) {
   /**
    * Carga todas las tareas de la plantilla.
    */
-  const loadTemplateTasks = React.useCallback(async () => {
+  const loadTemplateTasks = React.useCallback(async (): Promise<TemplateTasks[]> => {
     status.start();
     try {
       const template = await repo.loadTasks();
       setTemplateTasks(template);
+      return template;
+    } catch (e) {
+      status.fail(e, "Error cargando tareas plantilla");
+      return [];
     } finally {
       status.stop();
     }

@@ -29,14 +29,15 @@ type SalidaItem = {
  * @returns Formulario de alta de proyecto y, cuando aplica, modal de entrega inicial.
  */
 export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, onClose }) => {
-  const { proyectos, apertura: aperturaSvc, tasks,  plantillaInsumos, insumoProyecto, plantillaTareaInsumo, tareaInsumoProyecto, marcas, zonas,} = useGraphServices();
+  const { proyectos, templateTask: aperturaSvc, tasks,  plantillaInsumos, insumoProyecto, plantillaTareaInsumo, tareaInsumoProyecto, marcas, zonas,} = useGraphServices();
 
   const projectsController = useProjects(proyectos);
   const templateTasks = useTemplateTaks(aperturaSvc);
   const tasksController = useTasks(tasks);
+  const { loadTemplateTasks, templateTasks: templateTasksCache } = templateTasks;
 
-  const { loadInsumosPlantilla } = usePlantillaInsumos(plantillaInsumos);
-  const { loadTareaInsumosPlantilla } = useTareaPlantillaInsumo(plantillaTareaInsumo);
+  const {insumos: plantillaInsumosCache, loadInsumosPlantilla,} = usePlantillaInsumos(plantillaInsumos);
+  const {insumos: plantillaTareaCache, loadTareaInsumosPlantilla } = useTareaPlantillaInsumo(plantillaTareaInsumo);
   const { createAllInsumosFromTemplate, saveInsumoFile } = useInsumosProyecto(insumoProyecto);
   const { createAllInsumosTareaFromTemplate, getInsumosParaSubir } = useTareaInsumoProyecto(tareaInsumoProyecto);
 
@@ -52,10 +53,12 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
 
   React.useEffect(() => {
     if (!open) return;
-    templateTasks.loadTemplateTasks();
-    reloadMarcas();
-    reloadZonas();
-  }, [open]);
+    void loadTemplateTasks();
+    void reloadMarcas();
+    void reloadZonas();
+    void loadInsumosPlantilla("Apertura tienda");
+    void loadTareaInsumosPlantilla("Apertura tienda");
+  }, [open,]);
 
   const closeAll = React.useCallback(() => {
     setUploadOpen(false);
@@ -67,7 +70,6 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
     onClose();
   }, [onClose, projectsController]);
 
-  
 
   /**
    * Ejecuta el flujo de creacion del proyecto y sus dependencias operativas.
@@ -92,30 +94,39 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
       if (!created?.Id) throw new Error("No se pudo crear el proyecto");
 
       const projectId = created.Id;
+      const templateTasksArr = templateTasksCache.length > 0 ? templateTasksCache : await loadTemplateTasks();
 
       // 1) crear tareas
       setLoadingMessage("Creando las tareas del proyecto...");
-      await tasksController.createAllFromTemplate(
-        templateTasks.templateTasks,
-        projectId,
-        new Date(created.FechaInicio),
-        marca,
-        created.Zona
-      );
+      await tasksController.createAllFromTemplate(templateTasksArr ?? [], projectId, new Date(created.FechaInicio), marca, created.Zona);
 
       // 2) crear insumos del proyecto desde plantilla
       setLoadingMessage("Creando los insumos del proyecto...");
-      const plantillaInsumosArr = await loadInsumosPlantilla("Apertura tienda");
-      const plantillaTareaArr = await loadTareaInsumosPlantilla("Apertura tienda");
+      const plantillaInsumosArr = plantillaInsumosCache.length > 0 ? plantillaInsumosCache : await loadInsumosPlantilla("Apertura tienda");
+      const plantillaTareaArr = plantillaTareaCache.length > 0 ? plantillaTareaCache : await loadTareaInsumosPlantilla("Apertura tienda");
 
       const insumosCreated = await createAllInsumosFromTemplate(e, plantillaInsumosArr, projectId);
+      if (!insumosCreated.ok || Object.keys(insumosCreated.data).length === 0) {
+        throw new Error("No se pudieron crear los insumos del proyecto");
+      }
 
       // 3) relacionar tarea-insumo
       setLoadingMessage("Relacionando las tareas con sus insumos...");
       await createAllInsumosTareaFromTemplate(e, plantillaTareaArr, insumosCreated.data, projectId);
 
       setLoadingMessage("Preparando insumos iniciales...");
-      const insumosParaSubir = await getInsumosParaSubir(projectId, "T1", "Entrada" as FaseInsumo);
+      let insumosParaSubir = await getInsumosParaSubir(projectId, "T1", "Entrada" as FaseInsumo);
+
+      if (insumosParaSubir.length === 0) {
+        const inputTemplateIds = plantillaTareaArr
+          .filter((item) => item.Title === "T1" && item.TipoInsumo === "Entrada")
+          .map((item) => insumosCreated.data[String(item.IdInsumo ?? "").trim()])
+          .filter(Boolean);
+
+        if (inputTemplateIds.length > 0) {
+          insumosParaSubir = await insumoProyecto.getByIds(inputTemplateIds);
+        }
+      }
 
       if (insumosParaSubir.length > 0) {
         setLoading(false);
@@ -145,7 +156,6 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
   }, [toUpload]);
 
   
-
   /**
    * Sube los insumos iniciales requeridos despues de crear el proyecto.
    *

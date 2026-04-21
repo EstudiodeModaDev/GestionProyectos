@@ -18,9 +18,9 @@ export function useResponsableRulesRepository() {
    */
   const getReglas = React.useCallback(async (marca: string, codigoTarea: string) => {
     if (!marca || !codigoTarea) return [];
-    return await graph.responsableRegla.getAll({
+    return (await graph.responsableRegla.getAll({
       filter: `fields/Marca eq '${marca}' and  fields/Title eq '${codigoTarea}'`
-    });
+    })).items;
   }, [graph]);
 
   /**
@@ -30,7 +30,7 @@ export function useResponsableRulesRepository() {
    */
   const getDetalles = React.useCallback(async (reglaId: string) => {
     if (!reglaId) return [];
-    return await graph.responsableReglaDetalle.getAll({ filter: `fields/Title eq '${reglaId}'` });
+    return (await graph.responsableReglaDetalle.getAll({ filter: `fields/Title eq '${reglaId}'` })).items;
   }, [graph]);
 
   /**
@@ -41,9 +41,9 @@ export function useResponsableRulesRepository() {
    */
   const getJefeZona = React.useCallback(async (marca: string, zona: string): Promise<jefeZona[] | null> => {
     if (!marca || !zona) return null;
-    const jefes = await graph.jefeZona.getAll({
+    const jefes = (await graph.jefeZona.getAll({
       filter: `fields/Title eq '${marca}' and fields/Zona eq '${zona}'`
-    });
+    })).items;
     console.log(jefes);
     return jefes;
   }, [graph]);

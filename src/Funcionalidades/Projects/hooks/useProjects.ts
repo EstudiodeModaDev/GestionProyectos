@@ -28,7 +28,6 @@ export function useProjects(proyectosSvc: ProyectosServices) {
     e.preventDefault();
     const payload = form.buildCreatePayload();
     const created = await actions.createProject(payload);
-    await list.loadAll();
     return created;
   };
 

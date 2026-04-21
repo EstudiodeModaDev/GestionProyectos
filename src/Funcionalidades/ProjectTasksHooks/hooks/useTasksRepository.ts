@@ -10,7 +10,9 @@ import type { TareasProyectosService } from "../../../services/ProjectTasks.serv
  */
 export function useTasksRepository(tasksSvc: TareasProyectosService) {
   const getAll = React.useCallback(
-    (opts: GetAllOpts) => tasksSvc.getAllPlain(opts),
+    async (opts: GetAllOpts) => {
+      return await tasksSvc.getAllPlain(opts);
+    },
     [tasksSvc]
   );
 

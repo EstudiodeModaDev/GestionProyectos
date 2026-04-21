@@ -1,12 +1,13 @@
-import type { AperturaTiendaService } from "../../services/TemplateTasks.service";
+
 import type { TemplateTasks } from "../../models/AperturaTienda";
+import type { TemplateTaskService } from "../../services/TemplateTasks.service";
 
 /**
  * Centraliza las operaciones de escritura sobre tareas plantilla.
  * @param templateTasksSvc - Servicio de acceso a tareas plantilla.
  * @returns Operaciones de creación, edición y eliminación.
  */
-export function useTemplateTasksModification(templateTasksSvc: AperturaTiendaService) {
+export function useTemplateTasksModification(templateTasksSvc: TemplateTaskService) {
   /**
    * Crea una tarea plantilla.
    * @param payload - Datos de la tarea a crear.

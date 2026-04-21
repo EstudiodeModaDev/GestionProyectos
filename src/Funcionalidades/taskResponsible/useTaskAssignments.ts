@@ -12,10 +12,7 @@ import type { useResponsableTareaRepository } from "./useResponsableTareaReposit
  * @param responsableRepo - Repositorio de responsables por tarea.
  * @returns Estado async y utilidades de asignación.
  */
-export function useTaskAssignments(
-  taskRepo: ReturnType<typeof useTasksRepository>,
-  responsableRepo: ReturnType<typeof useResponsableTareaRepository>
-) {
+export function useTaskAssignments(taskRepo: ReturnType<typeof useTasksRepository>, responsableRepo: ReturnType<typeof useResponsableTareaRepository>) {
   const { account } = useAuth();
   const status = useAsyncStatus();
   const graph = useGraphServices();
@@ -36,7 +33,7 @@ export function useTaskAssignments(
 
         if (taskIds.length === 0) return 0;
 
-        const responsables = await graph.responsableProyecto.getAll({ top: 10000 });
+        const responsables = (await graph.responsableProyecto.getAll({ top: 10000 })).items;
 
         const taskIdSet = new Set(taskIds);
         const assignedSet = new Set<string>();

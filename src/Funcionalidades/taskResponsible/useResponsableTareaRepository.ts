@@ -16,7 +16,7 @@ export function useResponsableTareaRepository() {
    */
   const getByTaskId = React.useCallback(async (taskId: string) => {
     if (!taskId) return [];
-    return await graph.responsableProyecto.getAll({ filter: `fields/IdTarea eq '${taskId}'` });
+    return (await graph.responsableProyecto.getAll({ filter: `fields/IdTarea eq '${taskId}'` })).items;
   }, [graph]);
 
   /**
@@ -25,8 +25,7 @@ export function useResponsableTareaRepository() {
    * @param rows - Responsables a crear.
    * @returns Responsables creados.
    */
-  const createMany = React.useCallback(
-    async (taskId: string, rows: Omit<taskResponsible, "Id" | "IdTarea" | "reglaId">[]) => {
+  const createMany = React.useCallback(async (taskId: string, rows: Omit<taskResponsible, "Id" | "IdTarea" | "reglaId">[]) => {
       if (!taskId || !rows?.length) return [];
       const created: taskResponsible[] = [];
       for (const r of rows) {
@@ -42,26 +41,26 @@ export function useResponsableTareaRepository() {
     [graph]
   );
 
-  /**
-   * Elimina un responsable por su identificador.
-   * @param id - Identificador del responsable.
-   */
-  const deleteById = React.useCallback(async (id: string) => {
-    if (!id) return;
-    await graph.responsableProyecto.delete(id);
-  }, [graph]);
+    /**
+     * Elimina un responsable por su identificador.
+     * @param id - Identificador del responsable.
+     */
+    const deleteById = React.useCallback(async (id: string) => {
+      if (!id) return;
+      await graph.responsableProyecto.delete(id);
+    }, [graph]);
 
-  /**
-   * Elimina todos los responsables asignados a una tarea.
-   * @param taskId - Identificador de la tarea.
-   */
-  const deleteAllByTaskId = React.useCallback(async (taskId: string) => {
-    if (!taskId) return;
-    const current = await graph.responsableProyecto.getAll({ filter: `fields/IdTarea eq '${taskId}'` });
-    for (const r of current) {
-      if (r.Id) await graph.responsableProyecto.delete(r.Id);
-    }
-  }, [graph]);
+    /**
+     * Elimina todos los responsables asignados a una tarea.
+     * @param taskId - Identificador de la tarea.
+     */
+    const deleteAllByTaskId = React.useCallback(async (taskId: string) => {
+      if (!taskId) return;
+      const current = (await graph.responsableProyecto.getAll({ filter: `fields/IdTarea eq '${taskId}'` })).items;
+      for (const r of current) {
+        if (r.Id) await graph.responsableProyecto.delete(r.Id);
+      }
+    }, [graph]);
 
   return { getByTaskId, createMany, deleteById, deleteAllByTaskId };
 }

@@ -26,7 +26,7 @@ export function useResponsablesTarea() {
   const loadByTaskId = React.useCallback(async (taskId: string) => {
     status.start();
     try {
-      const data = await repo.getByTaskId(taskId);
+      const data = (await repo.getByTaskId(taskId));
       console.log(data);
       setItems(data ?? []);
       return data ?? [];

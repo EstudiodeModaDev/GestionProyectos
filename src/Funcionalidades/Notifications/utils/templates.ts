@@ -1,4 +1,5 @@
 import type { GraphRecipient } from "../../../graph/graphRest";
+import type { projectTasks } from "../../../models/AperturaTienda";
 import type { TaskInsumoView } from "../types";
 import { safeDateLabel } from "./formatters";
 
@@ -40,14 +41,7 @@ export function buildUnlockedTaskEmail(params: {
   correo: string;
   nombre?: string;
   predecessorTask: { Title?: string; Codigo?: string };
-  task: {
-    Title?: string;
-    Codigo?: string;
-    fechaInicio?: string;
-    FechaResolucion?: string;
-    Phase?: string;
-    Diaspararesolver?: number;
-  };
+  task: projectTasks;
   inputs: TaskInsumoView[];
 }): {
   subject: string;

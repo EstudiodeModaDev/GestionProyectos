@@ -29,7 +29,7 @@ type Props = {
  */
 export const AperturaTareaModalWrapper: React.FC<Props> = ({openFlowRules, plantilla, openTasks, openInsumos, onClose, openResponsables}) => {
   const graph = useGraphServices();
-  const templateTaks = useTemplateTaks(graph.apertura)
+  const templateTaks = useTemplateTaks(graph.templateTask)
   const { loadInsumosPlantilla, state: statePlantillaInsumos, setField: setFieldPlantillaInsumos, loading: loadingInsumos, handleSubmit: createPlantillaInsumo, handleEdit: editarInsumo, deleteInsumo} = usePlantillaInsumos(graph.plantillaInsumos)
   const { insumos: plantillaTareaInsumos, loadTareaInsumosPlantilla, deleteLink, createLink } = useTareaPlantillaInsumo(graph.plantillaTareaInsumo)
   const loading = templateTaks.loading || loadingInsumos

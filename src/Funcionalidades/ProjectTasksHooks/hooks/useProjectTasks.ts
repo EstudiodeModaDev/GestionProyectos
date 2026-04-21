@@ -20,6 +20,8 @@ import { useTaskForm } from "./useTaskForm";
 import { useTaskProgress } from "./useTaskProgress";
 import { useTasksRepository } from "./useTasksRepository";
 
+const TASK_CREATION_CONCURRENCY = 10;
+
 /**
  * Fachada principal del dominio de tareas de proyecto.
  * @param tasksSvc - Servicio de acceso a datos de tareas.
@@ -149,32 +151,15 @@ export function useTasks(tasksSvc: TareasProyectosService) {
    * @param zona - Zona asociada al proyecto.
    * @returns Resultado de la creación y códigos de tareas creadas.
    */
-  const createAllFromTemplate = React.useCallback(
-    async (
-      templateArr: TemplateTasks[],
-      projectId: string,
-      fechaInicioProyecto: Date,
-      marca: string,
-      zona: string
-    ) => {
+  const createAllFromTemplate = React.useCallback(async (templateArr: TemplateTasks[], projectId: string, fechaInicioProyecto: Date, marca: string, zona: string) => {
       if (!templateArr?.length) return { ok: false, data: [] as string[] };
 
       listStatus.start();
       const creadas: string[] = [];
 
       try {
-        for (const item of templateArr) {
-          const fechaSolucion =
-            item.Codigo === "T1"
-              ? item.diasHabiles
-                ? calcularFechaTarea(
-                    item.Diaspararesolver,
-                    fechaInicioProyecto,
-                    holidays,
-                    item.diasHabiles
-                  )
-                : null
-              : null;
+        const taskPayloads = templateArr.map((item) => {
+          const fechaSolucion = item.Codigo === "T1" ? item.diasHabiles ? calcularFechaTarea(item.Diaspararesolver, fechaInicioProyecto, holidays, item.diasHabiles): null : null;
 
           const fechaInicio = item.Codigo === "T1" ? new Date() : null;
           const estado = item.Codigo === "T1" ? "Iniciada" : "Bloqueada";
@@ -196,15 +181,38 @@ export function useTasks(tasksSvc: TareasProyectosService) {
             AreaResponsable: item.AreaResponsable,
           };
 
-          const createdTask = await repo.create(payload);
-          creadas.push(createdTask.Codigo);
+          return { item, payload };
+        });
 
-          await responsablesTarea.assignToTask({
-            taskId: createdTask.Id!,
-            codigoTarea: item.Codigo,
-            marca,
-            zona,
-          });
+        const createdTasks: Array<{ item: TemplateTasks; createdTask: projectTasks }> = [];
+
+        for (let i = 0; i < taskPayloads.length; i += TASK_CREATION_CONCURRENCY) {
+          const batch = taskPayloads.slice(i, i + TASK_CREATION_CONCURRENCY);
+          const createdBatch = await Promise.all(
+            batch.map(async ({ item, payload }) => {
+              const createdTask = await repo.create(payload);
+              return { item, createdTask };
+            })
+          );
+
+          for (const created of createdBatch) {
+            createdTasks.push(created);
+            creadas.push(created.createdTask.Codigo);
+          }
+        }
+
+        for (let i = 0; i < createdTasks.length; i += TASK_CREATION_CONCURRENCY) {
+          const batch = createdTasks.slice(i, i + TASK_CREATION_CONCURRENCY);
+          await Promise.all(
+            batch.map(async ({ item, createdTask }) =>
+              responsablesTarea.assignToTask({
+                taskId: createdTask.Id!,
+                codigoTarea: item.Codigo,
+                marca,
+                zona,
+              })
+            )
+          );
         }
 
         return { ok: true, data: creadas };

@@ -70,7 +70,7 @@ export function useResponsableReglaTareaDetalleSettings() {
         filter = `fields/reglaId eq ${Number(reglaId)}`;
       }
 
-      const items = await graph.responsableReglaDetalle.getAll({ filter, top: 5000 });
+      const items = (await graph.responsableReglaDetalle.getAll({ filter, top: 5000 })).items;
 
       setDetalles(items);
       return items;

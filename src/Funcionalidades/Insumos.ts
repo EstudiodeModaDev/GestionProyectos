@@ -24,6 +24,9 @@ export type TaskInsumoView = {
 };
 
 type SalidaFiles = Record<string, File>;
+const TASK_INPUT_LINK_CREATION_CONCURRENCY = 10;
+const INPUT_LINK_RETRY_COUNT = 4;
+const INPUT_LINK_RETRY_DELAY_MS = 300;
 
 /**
  * Administra los insumos de plantilla asociados a un proceso.
@@ -62,7 +65,7 @@ export function usePlantillaInsumos(insumosPlantillaSvc: PlantillaInsumoService)
       setLoading(true);
       setError(null);
       try {
-        const items = await insumosPlantillaSvc.getAll({filter: `fields/Proceso eq '${proceso}'`,});
+        const items = (await insumosPlantillaSvc.getAll({filter: `fields/Proceso eq '${proceso}'`,})).items;
         console.log(items)
         setInsumos(items);
         return items;
@@ -179,7 +182,7 @@ export function useTareaPlantillaInsumo(plantillaTareaInsumoSvc: PlantillaTareaI
       setLoading(true);
       setError(null);
       try {
-        const items = await plantillaTareaInsumoSvc.getAll({filter: `fields/Proceso eq '${proceso}'`, top:4000});
+        const items = (await plantillaTareaInsumoSvc.getAll({filter: `fields/Proceso eq '${proceso}'`, top:4000})).items;
         setInsumos(items);
         return items;
       } catch (e: any) {
@@ -300,7 +303,7 @@ export function useInsumosProyecto(insumosProyectoSvc: InsumoProyectoService) {
     setLoading(true);
     setError(null);
     try {
-      const items = await insumosProyectoSvc.getAll();
+      const items = (await insumosProyectoSvc.getAll()).items;
       setRows(items);
     } catch (e: any) {
       setError(e?.message ?? "Error cargando insumos");
@@ -309,10 +312,6 @@ export function useInsumosProyecto(insumosProyectoSvc: InsumoProyectoService) {
       setLoading(false);
     }
   }, [insumosProyectoSvc]);
-
-  React.useEffect(() => {
-    void loadFirstPage();
-  }, [loadFirstPage]);
 
   const applyRange = React.useCallback(() => {
     void loadFirstPage();
@@ -365,9 +364,9 @@ export function useInsumosProyecto(insumosProyectoSvc: InsumoProyectoService) {
     try {
       for (const p of plantillaInsumosArr) {
         const payload: InsumoProyecto = {
-          Title: proyectoId,               
-          IdInsumo: String(p.Id ?? ""),      // referencia a la plantilla (si la necesitas)
-          TipoInsumo: "",                    // ajusta si aplica / o pon p.loQueSea
+          Title: proyectoId,
+          IdInsumo: String(p.Id ?? ""),
+          TipoInsumo: "",
           CategoriaInsumo: p.Categoria,
           Texto: "",
           NombreInsumo: p.Title,
@@ -375,14 +374,14 @@ export function useInsumosProyecto(insumosProyectoSvc: InsumoProyectoService) {
         };
 
         const creado = await insumosProyectoSvc.create(payload);
-
         const plantillaId = String(p.Id ?? "").trim();
         const creadoId = String((creado as any)?.Id ?? "").trim();
 
         if (!plantillaId || !creadoId) {
           console.warn("No pude mapear insumo plantilla -> creado", { p, creado });
-          continue; 
+          continue;
         }
+
         map[plantillaId] = creadoId;
       }
 
@@ -521,6 +520,11 @@ export function useTareaInsumoProyecto(tareaInsumoProyectoSvc: TareaInsumoProyec
   });
   const graph = useGraphServices()
 
+  const wait = React.useCallback(
+    (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms)),
+    []
+  );
+
   
 
 /**
@@ -534,7 +538,7 @@ export function useTareaInsumoProyecto(tareaInsumoProyectoSvc: TareaInsumoProyec
     setLoading(true);
     setError(null);
     try {
-      const items = await tareaInsumoProyectoSvc.getAll();
+      const items = (await tareaInsumoProyectoSvc.getAll()).items;
       setRows(items);
     } catch (e: any) {
       setError(e?.message ?? "Error cargando tareas");
@@ -543,10 +547,6 @@ export function useTareaInsumoProyecto(tareaInsumoProyectoSvc: TareaInsumoProyec
       setLoading(false);
     }
   }, [tareaInsumoProyectoSvc]);
-
-  React.useEffect(() => {
-    void loadFirstPage();
-  }, [loadFirstPage]);
 
   const applyRange = React.useCallback(() => {
     void loadFirstPage();
@@ -580,7 +580,11 @@ export function useTareaInsumoProyecto(tareaInsumoProyectoSvc: TareaInsumoProyec
     setLoading(true);
 
     try {
-      for (const item of templateInsumos) {
+      for (let i = 0; i < templateInsumos.length; i += TASK_INPUT_LINK_CREATION_CONCURRENCY) {
+        const batch = templateInsumos.slice(i, i + TASK_INPUT_LINK_CREATION_CONCURRENCY);
+
+        await Promise.all(
+          batch.map(async (item) => {
         const plantillaInsumoId = String(item.IdInsumo ?? "").trim();
         const idRealInsumoProyecto = mapPlantillaToCreado[plantillaInsumoId];
 
@@ -589,7 +593,7 @@ export function useTareaInsumoProyecto(tareaInsumoProyectoSvc: TareaInsumoProyec
             "No hay Id real de InsumoProyecto para este insumo de plantilla:",
             { plantillaInsumoId, item, mapPlantillaToCreado }
           );
-          continue; // o throw si debe ser obligatorio
+          return; // o throw si debe ser obligatorio
         }
 
         const payload: tareaInsumoProyecto = {
@@ -600,6 +604,8 @@ export function useTareaInsumoProyecto(tareaInsumoProyectoSvc: TareaInsumoProyec
         };
 
         await tareaInsumoProyectoSvc.create(payload);
+          })
+        );
       }
 
       return { ok: true };
@@ -623,49 +629,48 @@ export function useTareaInsumoProyecto(tareaInsumoProyectoSvc: TareaInsumoProyec
    * @returns Insumos únicos asociados a la tarea.
    */
   const getInsumosParaSubir = async (proyectoId: string, taskId: string, fase: FaseInsumo = "Ambas"): Promise<InsumoProyecto[]> => {
+    for (let attempt = 0; attempt < INPUT_LINK_RETRY_COUNT; attempt++) {
+      let relaciones = (await graph.tareaInsumoProyecto.getAll({filter: `fields/Title eq '${taskId}' and fields/ProyectoId eq '${proyectoId}'`, top: 4000,})).items;
 
-    // 1) Traer relaciones por tarea + proyecto
-    let relaciones = await graph.tareaInsumoProyecto.getAll({filter: `fields/Title eq '${taskId}' and fields/ProyectoId eq '${proyectoId}'`, top: 4000,});
+      if (fase !== "Ambas") {
+        relaciones = relaciones.filter((rel: tareaInsumoProyecto) => {
+          const tipoUso = normalize(rel?.TipoUso);
+          return tipoUso === normalize(fase);
+        });
+      }
 
-    if (!relaciones?.length) return [];
+      if (relaciones.length > 0) {
+        const insumos = await Promise.all(
+          relaciones.map(async (rel: tareaInsumoProyecto) => {
+            const idInsumoProyecto = rel?.IdInsumoProyecto;
+            if (!idInsumoProyecto) return null;
 
+            try {
+              const ins = await graph.insumoProyecto.get(String(idInsumoProyecto));
+              return ins ?? null;
+            } catch {
+              return null;
+            }
+          })
+        );
 
-    if (fase !== "Ambas") {
-      relaciones = relaciones.filter((rel: tareaInsumoProyecto) => {
-        const tipoUso = normalize(rel?.TipoUso);
-        return tipoUso === normalize(fase);
-      });
-    }
-
-
-    if (!relaciones.length) return [];
-
-    // 3) Traer InsumoProyecto reales (por Id) en paralelo
-    const insumos = await Promise.all(
-      relaciones.map(async (rel: tareaInsumoProyecto) => {
-        const idInsumoProyecto = rel?.IdInsumoProyecto
-        if (!idInsumoProyecto) return null;
-
-        try {
-          const ins = await graph.insumoProyecto.get(String(idInsumoProyecto));
-          return ins ?? null;
-        } catch {
-          return null;
+        const result = insumos.filter(Boolean) as InsumoProyecto[];
+        const uniq = new Map<string, InsumoProyecto>();
+        for (const it of result) {
+          const id = String((it as any)?.Id ?? (it as any)?.fields?.Id ?? "");
+          if (id && !uniq.has(id)) uniq.set(id, it);
         }
-      })
-    );
 
-    // 4) Limpiar nulls
-    const result = insumos.filter(Boolean) as InsumoProyecto[];
+        const uniqueItems = [...uniq.values()];
+        if (uniqueItems.length > 0) return uniqueItems;
+      }
 
-    // 5) Evitar duplicados por Id
-    const uniq = new Map<string, InsumoProyecto>();
-    for (const it of result) {
-      const id = String((it as any)?.Id ?? (it as any)?.fields?.Id ?? "");
-      if (id && !uniq.has(id)) uniq.set(id, it);
+      if (attempt < INPUT_LINK_RETRY_COUNT - 1) {
+        await wait(INPUT_LINK_RETRY_DELAY_MS);
+      }
     }
 
-    return [...uniq.values()];
+    return [];
   };
 
   return {rows, loading, error, state, setField, loadFirstPage, applyRange, reloadAll, createAllInsumosTareaFromTemplate, getInsumosParaSubir};
@@ -702,7 +707,7 @@ export function useTaskInsumos(task: projectTasks | null) {
       setLoading(true);
       setError(null);
       try {
-        const links: tareaInsumoProyecto[] = await tareaInsumoProyecto.getAll({filter: `fields/Title eq '${task.Codigo}' and fields/ProyectoId eq '${task.IdProyecto}'`,});
+        const links: tareaInsumoProyecto[] = (await tareaInsumoProyecto.getAll({filter: `fields/Title eq '${task.Codigo}' and fields/ProyectoId eq '${task.IdProyecto}'`,})).items;
 
         if (!links.length) {
           if (!cancelled) {

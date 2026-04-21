@@ -39,8 +39,7 @@ export function useNotifications() {
    * @param args - Tarea predecesora y tareas habilitadas tras completar el flujo anterior.
    * @returns Promesa resuelta cuando todas las notificaciones fueron procesadas.
    */
-  const sendUnlockedTaskNotification = React.useCallback(
-    async (args: SendUnlockedTaskNotificationArgs) => {
+  const sendUnlockedTaskNotification = React.useCallback(async (args: SendUnlockedTaskNotificationArgs) => {
       const { predecessorTask, unlockedTasks } = args;
       if (!unlockedTasks?.length) return;
 

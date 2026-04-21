@@ -1,4 +1,5 @@
 import type { GraphRecipient } from "../../graph/graphRest";
+import type { projectTasks } from "../../models/AperturaTienda";
 
 /**
  * Modelo de vista para representar un insumo asociado a una tarea en notificaciones.
@@ -34,9 +35,7 @@ export type TaskInsumoView = {
  * Argumentos requeridos para construir y enviar la notificación de tarea desbloqueada.
  */
 export type SendUnlockedTaskNotificationArgs = {
-  /**
-   * Tarea previa cuyo cierre desbloqueó nuevas tareas.
-   */
+  /**Tarea previa cuyo cierre desbloqueó nuevas tareas. */
   predecessorTask: {
     /**
      * Nombre de la tarea predecesora.
@@ -50,40 +49,7 @@ export type SendUnlockedTaskNotificationArgs = {
   /**
    * Tareas habilitadas tras completar la tarea predecesora.
    */
-  unlockedTasks: Array<{
-    /**
-     * Identificador de la tarea desbloqueada.
-     */
-    Id?: string;
-    /**
-     * Nombre visible de la tarea.
-     */
-    Title?: string;
-    /**
-     * Código funcional de la tarea.
-     */
-    Codigo?: string;
-    /**
-     * Identificador del proyecto al que pertenece la tarea.
-     */
-    IdProyecto: string;
-    /**
-     * Fecha estimada de inicio.
-     */
-    fechaInicio?: string;
-    /**
-     * Fecha objetivo o de resolución.
-     */
-    FechaResolucion?: string;
-    /**
-     * Fase o etapa funcional de la tarea.
-     */
-    Phase?: string;
-    /**
-     * Duración esperada de la tarea en días.
-     */
-    Diaspararesolver?: number;
-  }>;
+  unlockedTasks: projectTasks[];
 };
 
 /**

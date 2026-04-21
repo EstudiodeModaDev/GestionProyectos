@@ -15,7 +15,7 @@ export class PlantillaTareaInsumoService extends BaseSharePointListService<plant
       graph,
       "estudiodemoda.sharepoint.com",
       "/sites/TransformacionDigital/IN/Test",
-      "Apertura Tiendas - Insumos Plantilla"
+      "Apertura Tiendas - Insumo Tarea Plantilla"
     );
   }
 
