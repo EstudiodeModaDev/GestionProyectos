@@ -16,7 +16,7 @@ import {
 export const msal = new PublicClientApplication({
   auth: {
     clientId: 'e276e058-5011-4d44-9747-bdfdf33e0470',
-    authority: 'https://login.microsoftonline.com/e276e058-5011-4d44-9747-bdfdf33e0470',
+    authority: 'https://login.microsoftonline.com/cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c',
     redirectUri: window.location.origin, 
   },
   cache: {
