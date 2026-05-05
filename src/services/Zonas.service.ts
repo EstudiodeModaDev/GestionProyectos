@@ -16,7 +16,7 @@ export class ZonasService extends BaseSharePointListService<desplegable> {
       graph,
       "estudiodemoda.sharepoint.com",
       "/sites/TransformacionDigital/IN/Test",
-      "Apertura Tiendas - Marcas"
+      "Apertura Tiendas - Zonas"
     );
   }
 

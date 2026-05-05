@@ -148,6 +148,24 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, fases,}) => 
     setDetalles(true);
   }, []);
 
+  const compareTasksByCodigo = React.useCallback((a: projectTasks, b: projectTasks) => {
+    const parseTaskNumber = (codigo?: string | null) => {
+      const match = String(codigo ?? "").trim().match(/^T(\d+)$/i);
+      return match ? Number(match[1]) : Number.POSITIVE_INFINITY;
+    };
+
+    const aNumber = parseTaskNumber(a.Codigo);
+    const bNumber = parseTaskNumber(b.Codigo);
+
+    if (aNumber !== bNumber) return aNumber - bNumber;
+
+    return String(a.Codigo ?? a.Title ?? a.Id ?? "").localeCompare(
+      String(b.Codigo ?? b.Title ?? b.Id ?? ""),
+      undefined,
+      { numeric: true, sensitivity: "base" }
+    );
+  }, []);
+
   /* ========= RESPONSABLES (FILTRO + UI) ========= */
 
   const getTaskResponsables = React.useCallback(
@@ -190,7 +208,8 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, fases,}) => 
         {fases.map((phase) => {
           const tasksInPhase = (projectTasks.tasks ?? [])
             .filter((t) => normalize(t.Phase) === normalize(phase.name))
-            .filter(passesResponsableFilter);
+            .filter(passesResponsableFilter)
+            .sort(compareTasksByCodigo);
 
           return (
             <div key={phase.name} className="kanban-column">

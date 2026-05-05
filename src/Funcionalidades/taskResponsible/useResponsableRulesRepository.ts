@@ -41,6 +41,7 @@ export function useResponsableRulesRepository() {
    */
   const getJefeZona = React.useCallback(async (marca: string, zona: string): Promise<jefeZona[] | null> => {
     if (!marca || !zona) return null;
+    console.log(`Buscando jefe de zona para marca '${marca}' y zona '${zona}'`);
     const jefes = (await graph.jefeZona.getAll({
       filter: `fields/Title eq '${marca}' and fields/Zona eq '${zona}'`
     })).items;

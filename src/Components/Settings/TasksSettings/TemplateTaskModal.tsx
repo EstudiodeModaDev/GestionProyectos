@@ -224,7 +224,7 @@ export default function TaskDetailModal({
                                 <li className="tp-detail-insumos__item" key={link.Id ?? `${link.Title}-${link.IdInsumo}`}>
                                     <div className="tp-detail-insumos__item-main">
                                         <span className="tp-detail-insumos__item-title">{nombre}</span>
-                                        <span className="tp-detail-insumos__item-sub">{tipoUso} · {link.Title}</span>
+                                        <span className="tp-detail-insumos__item-sub">Tarea {link.Title} · {tipoUso}</span>
                                     </div>
 
                                     <div className="tp-detail-insumos__item-side">

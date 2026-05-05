@@ -246,8 +246,7 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
       <div className="modal__backdrop"/>
 
       <div className="modal__panel" role="dialog" aria-modal="true">
-        {/* Header */
-}
+        {/* Header */}
         <header className="modal__header">
           <div>
             <h2 className="modal__title">Nuevo Proyecto de Apertura</h2>
@@ -259,8 +258,7 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
 
         <hr className="modal__divider" />
 
-        {/* Form */
-}
+        {/* Form */}
         <form onSubmit={handleCreate} className="modal__form">
           <div className="field">
             <label className="field__label">Nombre del proyecto</label>

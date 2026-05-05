@@ -31,6 +31,7 @@ export function useResponsableResolver(rulesRepo: ReturnType<typeof useResponsab
       if (!codigoTarea || !marca) return [];
 
       const reglas = await rulesRepo.getReglas(marca, codigoTarea);
+      console.log(reglas)
       if (!reglas?.length) return [];
 
       const reglaEspecifica = reglas.find((r) => (r.Ciudad ?? "").trim() === (zona ?? "").trim());
