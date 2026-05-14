@@ -6,24 +6,45 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "
 const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "*";
 const INSUMOS_BUCKET = Deno.env.get("INSUMOS_BUCKET") ?? "insumos";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Authorization, Content-Type",
-};
+function buildCorsHeaders(req: Request): HeadersInit {
+  const requestOrigin = req.headers.get("Origin") ?? "";
+  const requestedHeaders =
+    req.headers.get("Access-Control-Request-Headers") ??
+    "Authorization, Content-Type";
 
-function jsonResponse(body: unknown, status = 200) {
+  const allowedOrigins = ALLOWED_ORIGIN
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  const allowOrigin =
+    allowedOrigins.includes("*")
+      ? "*"
+      : allowedOrigins.includes(requestOrigin)
+        ? requestOrigin
+        : allowedOrigins[0] ?? "*";
+
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": requestedHeaders,
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin, Access-Control-Request-Headers",
+  };
+}
+
+function jsonResponse(req: Request, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...CORS_HEADERS,
+      ...buildCorsHeaders(req),
       "Content-Type": "application/json",
     },
   });
 }
 
-function errorResponse(message: string, status: number) {
-  return jsonResponse({ error: message }, status);
+function errorResponse(req: Request, message: string, status: number) {
+  return jsonResponse(req, { error: message }, status);
 }
 
 function createServiceClient() {
@@ -45,32 +66,32 @@ function sanitizePathSegment(value: string) {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: CORS_HEADERS });
+    return new Response(null, { headers: buildCorsHeaders(req) });
   }
 
   if (req.method !== "POST") {
-    return errorResponse("Metodo no permitido", 405);
+    return errorResponse(req, "Metodo no permitido", 405);
   }
 
   const authHeader = req.headers.get("Authorization") ?? "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
 
   if (!token) {
-    return errorResponse("Token de autorizacion requerido", 401);
+    return errorResponse(req, "Token de autorizacion requerido", 401);
   }
 
   try {
     await verifyEntraToken(token);
   } catch (error) {
     console.error("[upload-insumo] Token invalido:", error);
-    return errorResponse(`No autorizado: ${(error as Error).message}`, 401);
+    return errorResponse(req, `No autorizado: ${(error as Error).message}`, 401);
   }
 
   let form: FormData;
   try {
     form = await req.formData();
   } catch {
-    return errorResponse("Body invalido", 400);
+    return errorResponse(req, "Body invalido", 400);
   }
 
   const file = form.get("file");
@@ -79,11 +100,11 @@ Deno.serve(async (req: Request) => {
   const desiredName = String(form.get("fileName") ?? "").trim();
 
   if (!(file instanceof File)) {
-    return errorResponse("El campo 'file' es obligatorio.", 400);
+    return errorResponse(req, "El campo 'file' es obligatorio.", 400);
   }
 
   if (!insumoId) {
-    return errorResponse("El campo 'insumoId' es obligatorio.", 400);
+    return errorResponse(req, "El campo 'insumoId' es obligatorio.", 400);
   }
 
   const finalName = sanitizePathSegment(desiredName || file.name || "archivo");
@@ -102,7 +123,7 @@ Deno.serve(async (req: Request) => {
 
     if (error) throw error;
 
-    return jsonResponse({
+    return jsonResponse(req, {
       data: {
         path,
         fileName: finalName,
@@ -112,6 +133,6 @@ Deno.serve(async (req: Request) => {
     });
   } catch (error) {
     console.error("[upload-insumo] Error subiendo archivo:", error);
-    return errorResponse((error as Error).message, 500);
+    return errorResponse(req, (error as Error).message, 500);
   }
 });
