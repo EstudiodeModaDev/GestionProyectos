@@ -33,14 +33,14 @@ export function useDesviacionMetrics({
    */
   const filteredTasks = React.useMemo(() => {
     return projectTasksList.filter((task) => {
-      const taskTitle = task.Title?.trim() || "Sin tarea";
-      const taskArea = task.AreaResponsable?.trim() || "Sin area";
+      const taskTitle = task.nombre_tarea?.trim() || "Sin tarea";
+      const taskArea = task.area_responsable?.trim() || "Sin area";
       const taskEstado = task.Estado?.trim() || "Sin estado";
-      const responsables = responsablesByTaskId[String(task.Id ?? "").trim()] ?? [];
+      const responsables = responsablesByTaskId[String(task.id ?? "").trim()] ?? [];
       const responsable =
         responsables.length > 0
           ? responsables
-              .map((item) => item.Title?.trim() || item.Correo?.trim() || "Sin responsable")
+              .map((item) => item.nombre?.trim() || item.correo?.trim() || "Sin responsable")
               .join(", ")
           : "Sin responsable";
 
@@ -58,18 +58,18 @@ export function useDesviacionMetrics({
    */
   const taskRows = React.useMemo<TaskRowView[]>(() => {
     return filteredTasks.map((task) => {
-      const responsables = responsablesByTaskId[String(task.Id ?? "").trim()] ?? [];
+      const responsables = responsablesByTaskId[String(task.id ?? "").trim()] ?? [];
       const responsable =
         responsables.length > 0
           ? responsables
-              .map((item) => item.Title?.trim() || item.Correo?.trim() || "Sin responsable")
+              .map((item) => item.nombre?.trim() || item.correo?.trim() || "Sin responsable")
               .join(", ")
           : "Sin responsable";
 
       return {
-        id: String(task.Id ?? task.Codigo ?? task.Title),
-        tarea: task.Title,
-        area: task.AreaResponsable?.trim() || "Sin area",
+        id: String(task.id ?? task.codigo ?? task.nombre_tarea),
+        tarea: task.nombre_tarea?.trim() || "Sin tarea",
+        area: task.area_responsable?.trim() || "Sin area",
         responsable,
         estado: task.Estado || "Sin estado",
         observacion: task.razonBloqueo?.trim() || task.razonDevolucion?.trim() || "-",
@@ -88,15 +88,15 @@ export function useDesviacionMetrics({
     const estados = new Set<string>();
 
     for (const task of projectTasksList) {
-      tasks.add(task.Title?.trim() || "Sin tarea");
-      areas.add(task.AreaResponsable?.trim() || "Sin area");
+      tasks.add(task.nombre_tarea?.trim() || "Sin tarea");
+      areas.add(task.area_responsable?.trim() || "Sin area");
       estados.add(task.Estado?.trim() || "Sin estado");
 
-      const assigned = responsablesByTaskId[String(task.Id ?? "").trim()] ?? [];
+      const assigned = responsablesByTaskId[String(task.id ?? "").trim()] ?? [];
       const responsable =
         assigned.length > 0
           ? assigned
-              .map((item) => item.Title?.trim() || item.Correo?.trim() || "Sin responsable")
+              .map((item) => item.nombre?.trim() || item.correo?.trim() || "Sin responsable")
               .join(", ")
           : "Sin responsable";
 
@@ -139,9 +139,9 @@ export function useDesviacionMetrics({
    * Avance global del proyecto según el valor persistido en SharePoint.
    */
   const avanceGlobal = React.useMemo(() => {
-    const numeric = Number(project.Progreso);
+    const numeric = Number(project.progreso);
     return Number.isNaN(numeric) ? 0 : numeric;
-  }, [project.Progreso]);
+  }, [project.progreso]);
 
   /**
    * Desviación promedio de las tareas visibles.

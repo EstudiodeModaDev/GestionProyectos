@@ -1,23 +1,23 @@
-
 import type { TemplateTasks } from "../../models/AperturaTienda";
-import type { TemplateTaskService } from "../../services/TemplateTasks.service";
+import type { TemplateTaskRepository } from "../../repositories/templateTaskRepository/templateTaskRepository";
+import { showError, showSuccess } from "../../utils/toast";
 
 /**
  * Centraliza las operaciones de escritura sobre tareas plantilla.
  * @param templateTasksSvc - Servicio de acceso a tareas plantilla.
  * @returns Operaciones de creación, edición y eliminación.
  */
-export function useTemplateTasksModification(templateTasksSvc: TemplateTaskService) {
+export function useTemplateTasksModification(templateTasksSvc: TemplateTaskRepository) {
   /**
    * Crea una tarea plantilla.
    * @param payload - Datos de la tarea a crear.
    */
   const handleSubmit = async (payload: TemplateTasks) => {
     try {
-      await templateTasksSvc.create(payload);
-      alert("Se ha creado el registro con Ã©xito");
+      await templateTasksSvc.createTask(payload);
+      showSuccess("Se ha creado el registro con éxito");
     } catch {
-      alert("Ha sucedio un error, por favor intentelo de nuevo");
+      showError("Ha sucedido un error, por favor inténtelo de nuevo");
       return;
     }
   };
@@ -29,10 +29,10 @@ export function useTemplateTasksModification(templateTasksSvc: TemplateTaskServi
    */
   const handleEdit = async (Id: string, payload: TemplateTasks) => {
     try {
-      await templateTasksSvc.update(Id, payload);
-      alert("Se ha editado el registro con Ã©xito");
+      await templateTasksSvc.updateTask(Id, payload);
+      showSuccess("Se ha editado el registro con éxito");
     } catch {
-      alert("Ha ocurrido un error, por favor intenelo nuevamente");
+      showError("Ha ocurrido un error, por favor inténtelo nuevamente");
       return;
     }
   };
@@ -43,10 +43,10 @@ export function useTemplateTasksModification(templateTasksSvc: TemplateTaskServi
    */
   const handleDelete = async (Id: string) => {
     try {
-      await templateTasksSvc.delete(Id);
-      alert("Se ha eliminado el registro con Ã©xito");
+      await templateTasksSvc.inactivateTask(Id);
+      showSuccess("Se ha eliminado el registro con éxito");
     } catch {
-      alert("Ha ocurrido un error, por favor intenelo nuevamente");
+      showError("Ha ocurrido un error, por favor inténtelo nuevamente");
       return;
     }
   };

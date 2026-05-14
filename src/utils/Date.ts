@@ -1,3 +1,4 @@
+import type { TZDate } from "@date-fns/tz";
 import type { Holiday } from "festivos-colombianos";
 
 /**
@@ -124,4 +125,13 @@ export const isHoliday = (date: Date, holidays: Holiday[]) => {
   return holidays.some(h =>
     sliceYMD(h.holiday) === ymd || sliceYMD(h.celebrationDay) === ymd
   );
+};
+
+export const toSupabaseDate = (d: Date | TZDate) => {
+  const dd = new Date(d);
+  dd.setHours(12, 0, 0, 0);
+  const y = dd.getFullYear();
+  const m = String(dd.getMonth() + 1).padStart(2, "0");
+  const day = String(dd.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 };

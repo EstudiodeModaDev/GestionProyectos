@@ -40,10 +40,10 @@ export const InsumosPlantillaModal: React.FC<InsumosPlantillaModalProps> = ({ope
      * Reinicia el formulario para crear un nuevo insumo.
      */
     const resetStateForNew = () => {
-        setField("Id", undefined as any);
-        setField("Title", "" as plantillaInsumos["Title"]);
-        setField("Categoria", "" as plantillaInsumos["Categoria"]);
-        setField("Proceso", plantilla.nombre as plantillaInsumos["Proceso"]);
+        setField("id", plantilla.id);
+        setField("nombre_insumo", "" as plantillaInsumos["nombre_insumo"]);
+        setField("categoria", "" as plantillaInsumos["categoria"]);
+        setField("proceso", plantilla.nombre as plantillaInsumos["proceso"]);
     };
 
     
@@ -66,10 +66,10 @@ export const InsumosPlantillaModal: React.FC<InsumosPlantillaModalProps> = ({ope
      */
     const handleClickInsumo = (ins: plantillaInsumos) => {
         setSelectedInsumo(ins);
-        setField("Id", (ins.Id ?? "") as plantillaInsumos["Id"]);
-        setField("Title", (ins.Title ?? "") as plantillaInsumos["Title"]);
-        setField("Categoria", (ins.Categoria ?? "") as plantillaInsumos["Categoria"]);
-        setField("Proceso", (ins.Proceso ?? "") as plantillaInsumos["Proceso"]);
+        setField("id", (ins.id ?? "") as plantillaInsumos["id"]);
+        setField("nombre_insumo", (ins.nombre_insumo ?? "") as plantillaInsumos["nombre_insumo"]);
+        setField("categoria", (ins.categoria ?? "") as plantillaInsumos["categoria"]);
+        setField("proceso", (ins.proceso ?? "") as plantillaInsumos["proceso"]);
         setDetailOpen(true);
     };
 
@@ -124,10 +124,10 @@ export const InsumosPlantillaModal: React.FC<InsumosPlantillaModalProps> = ({ope
                         ) : (
                             <ul className="tp-task-list">
                                 {insumos.map((ins) => {
-                                    const id = ins.Id ?? `${ins.Proceso}-${ins.Title}`;
-                                    const nombre = ins.Title ?? "Insumo sin título";
-                                    const categoria = ins.Categoria ?? "";
-                                    const proceso = ins.Proceso ?? "";
+                                    const id = ins.id ?? `${ins.proceso}-${ins.nombre_insumo}`;
+                                    const nombre = ins.nombre_insumo ?? "Insumo sin título";
+                                    const categoria = ins.categoria ?? "";
+                                    const proceso = ins.proceso ?? "";
 
                                     return (
                                         <li key={id}>

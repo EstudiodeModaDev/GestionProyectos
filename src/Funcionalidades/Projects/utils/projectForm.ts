@@ -1,4 +1,4 @@
-import { toGraphDateTime } from "../../../utils/Date";
+import { toSupabaseDate } from "../../../utils/Date";
 import type { ProjectSP } from "../../../models/Projects";
 import type { AccountInfo } from "@azure/msal-browser";
 
@@ -9,17 +9,15 @@ import type { AccountInfo } from "@azure/msal-browser";
  */
 export function createInitialProjectState(account: AccountInfo | null): ProjectSP {
   return {
-    Descripcion: "",
-    Estado: "",
-    Title: "",
-    CorreoLider: account?.username ?? "",
-    Fechadelanzamiento: "",
-    FechaInicio: toGraphDateTime(new Date()) ?? "",
+    correo_lider: account?.username ?? "",
+    estado: "",
+    fecha_inicio: "",
     fulfillment: 0,
-    Lider: account?.name ?? "",
-    Progreso: "0",
-    Marca: "",
-    Zona: "",
+    id_marca: "",
+    id_zona: "",
+    lider: account?.name ?? "",
+    nombre_proyecto: "",
+    progreso: 0,
   };
 }
 
@@ -30,16 +28,15 @@ export function createInitialProjectState(account: AccountInfo | null): ProjectS
  */
 export function buildProjectCreatePayload(state: ProjectSP): ProjectSP {
   return {
-    Descripcion: state.Descripcion ?? "",
-    Estado: "En curso",
-    Title: state.Title,
-    CorreoLider: state.CorreoLider,
-    Fechadelanzamiento: toGraphDateTime(state.Fechadelanzamiento) ?? "",
-    FechaInicio: toGraphDateTime(state.FechaInicio) ?? "",
+    estado: "En curso",
+    nombre_proyecto: state.nombre_proyecto,
+    correo_lider: state.correo_lider,
+    fecha_inicio: toSupabaseDate(new Date(state.fecha_inicio)) ?? "",
     fulfillment: 0,
-    Lider: state.Lider,
-    Progreso: "0",
-    Marca: state.Marca,
-    Zona: state.Zona,
+    lider: state.lider,
+    progreso: 0,
+    id_marca: state.id_marca,
+    id_zona: state.id_zona,
   };
 }
+

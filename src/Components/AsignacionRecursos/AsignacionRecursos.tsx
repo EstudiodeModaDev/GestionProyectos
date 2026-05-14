@@ -2,9 +2,9 @@
 import * as React from "react";
 import "./AsignacionRecursos.css";
 import type { ProjectSP } from "../../models/Projects";
-import { useGraphServices } from "../../graph/graphContext";
 import type { projectTasks, taskResponsible } from "../../models/AperturaTienda";
 import { useTasks } from "../../Funcionalidades/ProjectTasksHooks/useProjectTasks";
+import { useRepositories } from "../../repositories/repositoriesContext";
 
 export type ResourceLoadRow = {
   name: string;
@@ -40,10 +40,10 @@ function buildRowsFromTasks(tasks: projectTasks[], criticalCodes: string[], resp
   const map = new Map<string, { totalTasks: number; criticalTasks: number }>();
 
   for (const t of tasks) {
-    const taskId = String(t.Id ?? "").trim();
+    const taskId = String(t.id ?? "").trim();
     const responsables = taskId ? (responsablesByTaskId[taskId] ?? []) : [];
 
-    const isCritical = !!t.Codigo && criticalCodes.includes(t.Codigo);
+    const isCritical = !!t.codigo && criticalCodes.includes(t.codigo);
 
     if (!responsables.length) {
       const key = "Sin responsable";
@@ -55,7 +55,7 @@ function buildRowsFromTasks(tasks: projectTasks[], criticalCodes: string[], resp
     }
 
     for (const r of responsables) {
-      const key = (r.Title ?? "").trim() || normMail(r.Correo) || "Sin responsable";
+      const key = (r.nombre ?? "").trim() || normMail(r.correo) || "Sin responsable";
 
       if (!map.has(key)) map.set(key, { totalTasks: 0, criticalTasks: 0 });
       const agg = map.get(key)!;
@@ -86,10 +86,10 @@ function buildRowsFromTasks(tasks: projectTasks[], criticalCodes: string[], resp
  * @returns Tabla con tareas asignadas, criticidad y porcentaje de carga.
  */
 export const ResourceAllocation: React.FC<ResourceAllocationProps> = ({ project }) => {
-  const graph = useGraphServices();
+  const repositories = useRepositories()
 
   // tasks hook
-  const { loadProjectTasks, tasks: projectTasksList, critical } = useTasks(graph.tasks);
+  const { loadProjectTasks, tasks: projectTasksList, critical } = useTasks(repositories.projectTasks!);
 
   // ruta critica
   const [criticalCodes, setCriticalCodes] = React.useState<string[]>([]);
@@ -102,21 +102,21 @@ export const ResourceAllocation: React.FC<ResourceAllocationProps> = ({ project 
   // clave estable basada en los IDs de las tareas para evitar loops
   const tasksKey = React.useMemo(() => {
     const ids = (projectTasksList ?? [])
-      .map((t) => String(t.Id ?? "").trim())
+      .map((t) => String(t.id ?? "").trim())
       .filter(Boolean)
       .sort();
     return ids.join("|");
   }, [projectTasksList]);
 
   // referencia directa al service (mas estable que depender de "graph" completo)
-  const responsableSvc = graph.responsableProyecto;
+  const responsableSvc = repositories.projectTaskReponsible;
 
   /* ==========================
      1) Cargar tareas + ruta critica
      - Depende SOLO del project.Id y loadProjectTasks
   ========================== */
   React.useEffect(() => {
-    const pid = project.Id;
+    const pid = project.id;
     if (!pid) return;
 
     let cancel = false;
@@ -135,14 +135,14 @@ export const ResourceAllocation: React.FC<ResourceAllocationProps> = ({ project 
     return () => {
       cancel = true;
     };
-  }, [project.Id, loadProjectTasks]);
+  }, [project.id, loadProjectTasks]);
 
   /* ==========================
      2) Cargar responsables del proyecto basado en tasksKey
      - Evita bucles aunque projectTasksList cambie de referencia
   ========================== */
   React.useEffect(() => {
-    const pid = project.Id;
+    const pid = project.id;
     if (!pid) return;
 
     const ids = tasksKey ? tasksKey.split("|").filter(Boolean) : [];
@@ -160,27 +160,14 @@ export const ResourceAllocation: React.FC<ResourceAllocationProps> = ({ project 
       try {
         const CHUNK = 20;
 
-        /**
-         * Construye un filtro `or` para consultar responsables por lotes de tareas.
-         *
-         * @param values - Identificadores de tareas a incluir en el filtro.
-         * @returns Expresion OData compuesta.
-         */
-        const buildOrFilter = (values: string[]) =>
-          values.map((v) => `fields/IdTarea eq '${v}'`).join(" or ");
-
         const map: Record<string, taskResponsible[]> = {};
 
         for (let i = 0; i < ids.length; i += CHUNK) {
           const part = ids.slice(i, i + CHUNK);
-          const filter = buildOrFilter(part);
 
-          const rows = await responsableSvc.getAll({
-            filter,
-            top: 10000,
-          });
+          const rows = await responsableSvc?.loadResponsible({tarea_ids: part});
 
-          for (const r of rows.items ?? []) {
+          for (const r of rows ?? []) {
             const taskId = String((r as any).IdTarea ?? "").trim();
             if (!taskId) continue;
             (map[taskId] ||= []).push(r);
@@ -201,7 +188,7 @@ export const ResourceAllocation: React.FC<ResourceAllocationProps> = ({ project 
     return () => {
       cancel = true;
     };
-  }, [project.Id, tasksKey, responsableSvc]);
+  }, [project.id, tasksKey, responsableSvc]);
 
   /* ==========================
      3) Construir rows (memo)
@@ -228,7 +215,7 @@ export const ResourceAllocation: React.FC<ResourceAllocationProps> = ({ project 
       <header className="resource-allocation__header">
         <h1 className="resource-allocation__title">Asignación de Recursos</h1>
         <p className="resource-allocation__subtitle">
-          Visualización de la carga de trabajo por recurso en el proyecto {project.Title}
+          Visualización de la carga de trabajo por recurso en el proyecto {project.nombre_proyecto}
         </p>
         {respError ? (
           <p className="resource-allocation__subtitle" style={{ color: "#b91c1c" }}>

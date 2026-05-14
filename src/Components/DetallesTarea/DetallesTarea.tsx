@@ -3,14 +3,18 @@ import "./DetallesTarea.css";
 import type { projectTasks } from "../../models/AperturaTienda";
 import type { KanbanPhase } from "../kanban/Kanban";
 import { ParseDateShow } from "../../utils/Date";
-import { useInsumosProyecto, useTaskInsumos, type TaskInsumoView, } from "../../Funcionalidades/Insumos";
-import { useGraphServices } from "../../graph/graphContext";
+import { useInsumosProyecto, useTaskInsumos, type TaskInsumoView } from "../../Funcionalidades/insumos";
 import type { taskResponsible } from "../../models/AperturaTienda";
 import { useResponsablesTarea } from "../../Funcionalidades/taskResponsible/useResponsableTarea";
 import { useAuth } from "../../auth/authProvider";
 import { SalidaModal } from "./UploadInsumos";
 import { ReturnReasonModal } from "../confirmationModal/ConfirmModal";
 import { TaskLogModal } from "../TaskLog/TaskLog";
+import { useRepositories } from "../../repositories/repositoriesContext";
+import { showError, showWarning } from "../../utils/toast";
+import { DocumentViewerModal } from "../DocumentViewer/DocumentViewerModal";
+import { isPreviewSupported, triggerBrowserDownload } from "../DocumentViewer/documentViewerUtils";
+import type { Archivo } from "../../models/Files";
 
 // ✅ Tipos nuevos del modal
 export type SalidaValue = { kind: "Archivo"; file: File | null } | { kind: "Texto"; text: string } | { kind: "Opcion"; approved: string };
@@ -42,11 +46,11 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
   if (!open || !task) return null;
 
   const { account } = useAuth();
+  const repositories = useRepositories();
 
   // Insumos
   const { inputs, outputs, loading, error, } = useTaskInsumos(task);
-  const { insumoProyecto } = useGraphServices();
-  const { saveInsumoFile, loadInsumosFiles, saveInsumoText} = useInsumosProyecto(insumoProyecto);
+  const { saveInsumoFile, loadInsumosFiles, saveInsumoText} = useInsumosProyecto(repositories.projectInsumo!);
 
   // Responsables
   const responsablesCtrl = useResponsablesTarea();
@@ -57,17 +61,22 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
   const [bloquear, setBloquear] = React.useState<boolean>(false);
   const [blocking, setBlocking] = React.useState<boolean>(false);
   const [log, setLog] = React.useState<boolean>(false);
+  const [viewerFile, setViewerFile] = React.useState<Archivo | null>(null);
+
+  React.useEffect(() => {
+    console.log(inputs)
+  }, [task?.id]);
 
   React.useEffect(() => {
     let mounted = true;
 
     (async () => {
-      if (!task?.Id) return;
+      if (!task?.id) return;
       setLoadingResp(true);
       setErrorResp(null);
 
       try {
-        const data = (await responsablesCtrl.loadByTaskId(task.Id));
+        const data = (await responsablesCtrl.loadByTaskId(Number(task.id)));
         if (!mounted) return;
         setResponsables(data ?? []);
       } catch (e: any) {
@@ -82,18 +91,18 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
     return () => {
       mounted = false;
     };
-  }, [task?.Id]);
+  }, [task?.id]);
 
   // UI helpers
-  const phaseName = phases.find((p) => p.name === task.Phase)?.name || task.Phase;
+  const phaseName = phases.find((p) => p.name === task.fase)?.name || task.fase;
   const isCompleted = task.Estado === "Completada";
   const isBlocked = !!predecessor && predecessor.Estado !== "Completada" && !isCompleted;
   const userEmail = (account?.username ?? "").toLowerCase().trim();
-  const isResponsible = responsables.some((r) => (r.Correo ?? "").toLowerCase().trim() === userEmail) || userEmail === "dpalacios@estudiodemoda.com.co";
+  const isResponsible = responsables.some((r) => (r.correo ?? "").toLowerCase().trim() === userEmail) || userEmail === "dpalacios@estudiodemoda.com.co";
 
   const [showSalidaModal, setShowSalidaModal] = React.useState<boolean>(false);
 
-  const buttonTitle = isBlocked && predecessor ? blockedReason || `Depende de "${predecessor.Title}" en estado "${predecessor.Estado}".`
+  const buttonTitle = isBlocked && predecessor ? blockedReason || `Depende de "${predecessor.nombre_tarea}" en estado "${predecessor.Estado}".`
       : !isResponsible ? "No tienes permiso para completar esta tarea" : undefined;
 
   const disableComplete = isBlocked || !isResponsible || loading || loadingResp || sending;
@@ -111,14 +120,14 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
    */
   const handleClickInsumo = async (ins: TaskInsumoView) => {
     if (ins.estado === "Pendiente") {
-      alert("Este insumo aún no tiene archivos adjuntos.");
+      showWarning("Este insumo aún no tiene archivos adjuntos.");
       return;
     }
 
     const attachments = await loadInsumosFiles(ins.id,);
 
     if (!attachments.length) {
-      alert("No se encontraron adjuntos para este insumo.");
+      showWarning("No se encontraron adjuntos para este insumo.");
       return;
     }
 
@@ -126,11 +135,16 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
     const downloadUrl = file.webUrl;
 
     if (!downloadUrl) {
-      alert("No se pudo obtener la URL de descarga del archivo.");
+      showError("No se pudo obtener la URL de descarga del archivo.");
       return;
     }
 
-    window.open(downloadUrl, "_blank", "noopener,noreferrer");
+    if (!isPreviewSupported(file)) {
+      triggerBrowserDownload(file);
+      return;
+    }
+
+    setViewerFile(file);
   };
 
   
@@ -170,7 +184,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
     });
 
     if (faltantes.length > 0) {
-      alert("Debes completar estos entregables:\n\n" + faltantes.map((f: any) => `• ${f.title}`).join("\n"));
+      showWarning("Debes completar estos entregables:\n\n" + faltantes.map((f: any) => `- ${f.title}`).join("\n"), { autoClose: 8000 });
       return;
     }
 
@@ -228,7 +242,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
           <div className="tdm-header-row">
             <div className="tdm-header-main">
               <h3 className="tdm-title">
-                {task.Title} <span className="tdm-title-id">({task.Codigo})</span>
+                {task.nombre_tarea} <span className="tdm-title-id">({task.codigo})</span>
               </h3>
             </div>
 
@@ -251,8 +265,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
                 ) : responsables.length ? (
                   <div className="tdm-responsables-list">
                     {responsables.map((r) => {
-                      const initials = r.Title
-                        ? r.Title.split(/\s+/)
+                      const initials = r.nombre
+                        ? r.nombre.split(/\s+/)
                             .filter(Boolean)
                             .map((p) => p[0])
                             .join("")
@@ -261,12 +275,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
                         : "N/A";
 
                       return (
-                        <div key={r.Id ?? `${r.IdTarea}-${r.Correo}`}  className="tdm-responsable-row">
+                        <div key={r.id ?? `${r.tarea_id}-${r.correo}`}  className="tdm-responsable-row">
                           <div className="tdm-avatar">{initials}</div>
 
                           <div className="tdm-responsable-info">
-                            <span className="tdm-section-text">{r.Title}</span>
-                            <small style={{ opacity: 0.7 }}>{r.Correo}</small>
+                            <span className="tdm-section-text">{r.nombre}</span>
+                            <small style={{ opacity: 0.7 }}>{r.correo}</small>
                           </div>
                         </div>
                       );
@@ -284,7 +298,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
 
               <div>
                 <p className="tdm-section-label">Duración estimada</p>
-                <p className="tdm-section-text">{task.Diaspararesolver} Días hábiles</p>
+                <p className="tdm-section-text">{task.dias_para_resolver} Días hábiles</p>
               </div>
 
               <div>
@@ -343,7 +357,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
                   {predecessor ? (
                     <div className="tdm-predecessor-item" onClick={() => onGoToTask(predecessor)}>
                       <p className="tdm-predecessor-title">
-                        {predecessor.Title} ({predecessor.Codigo})
+                        {predecessor.nombre_tarea} ({predecessor.codigo})
                       </p>
                       <p className={ "tdm-predecessor-status " + (predecessor.Estado === "Completada" ? "tdm-predecessor-status-ok" : "tdm-predecessor-status-blocked")}>
                         Estado: {predecessor.Estado}
@@ -375,7 +389,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
                   </p>
                 ) : inputs.length ? (
                   <ul className="tdm-insumos-list">
-                    {inputs.map((ins) => (
+                    {inputs.map((ins: TaskInsumoView) => (
                       <li key={ins.id} className="tdm-insumos-item" onClick={() => handleClickInsumo(ins)}>
                         <span className="tdm-insumo-title">
                           <strong>{ins.title}</strong> - {ins.texto ? ins.texto : "No subido"}
@@ -410,7 +424,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
                   </p>
                 ) : outputs.length ? (
                   <ul className="tdm-insumos-list">
-                    {outputs.map((out) => (
+                    {outputs.map((out: TaskInsumoView) => (
                       <li key={out.id} className="tdm-insumos-item" onClick={() => handleClickInsumo(out)}>
                         <span className="tdm-insumo-title">
                           {out.title} - {out.texto ? out.texto : "No subido"}
@@ -440,9 +454,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
                       {successors.map((succ) => {
                         const st = succ.Estado;
                         return (
-                          <li key={succ.Id} className="tdm-successor-item" onClick={() => onGoToTask(succ)}>
+                          <li key={succ.id} className="tdm-successor-item" onClick={() => onGoToTask(succ)}>
                             <p className="tdm-successor-title">
-                              {succ.Title} ({succ.Codigo})
+                              {succ.nombre_tarea} ({succ.codigo})
                             </p>
                             <span className={ "tdm-successor-status " + (st !== "Finalizada" ? "tdm-successor-status-blocked" : "tdm-successor-status-ok")}>
                               {st}
@@ -522,8 +536,10 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
       <TaskLogModal 
         open={log} 
         onClose={() => setLog(false)} 
-        taskId={task.Id!}  
-        taskTitle={task.Title}/>
+        taskId={task.id!}  
+        taskTitle={task.nombre_tarea}/>
+
+      <DocumentViewerModal open={!!viewerFile} file={viewerFile} onClose={() => setViewerFile(null)} />
     </>
   );
 };

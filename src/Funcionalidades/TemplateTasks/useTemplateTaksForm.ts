@@ -1,17 +1,15 @@
 import type { TemplateTasks } from "../../models/AperturaTienda";
 import React from "react";
 
-const cleanTask = {
-  Codigo: "",
-  CorreoResponsable: "",
-  Dependencia: "",
-  Diaspararesolver: 0,
-  diasHabiles: true,
-  Phase: "",
-  Responsable: "",
-  TipoTarea: "",
-  Title: "",
-  AreaResponsable: ""
+const cleanTask: TemplateTasks = {
+  area_responsable: "",
+  codigo: "",
+  fase: "",
+  tipo_tarea: "",
+  dias_para_resolver: 0,
+  dependencia: null,
+  dias_habiles: false,
+  nombre_tarea: ""
 }
 
 /**
@@ -43,14 +41,14 @@ export function useTemplateForm() {
    */
   const createPayload = (o: TemplateTasks): TemplateTasks => {
     const payload: TemplateTasks = {
-      Codigo: o.Codigo,
-      Dependencia: o.Dependencia,
-      diasHabiles: o.diasHabiles,
-      Diaspararesolver: o.Diaspararesolver,
-      Phase: o.Phase,
-      TipoTarea: o.TipoTarea,
-      Title: o.Title,
-      AreaResponsable: o.AreaResponsable
+      codigo: o.codigo,
+      dependencia: o.dependencia,
+      dias_habiles: o.dias_habiles,
+      dias_para_resolver: o.dias_para_resolver,
+      fase: o.fase,
+      tipo_tarea: o.tipo_tarea,
+      nombre_tarea: o.nombre_tarea,
+      area_responsable: o.area_responsable
     };
     return payload;
   };

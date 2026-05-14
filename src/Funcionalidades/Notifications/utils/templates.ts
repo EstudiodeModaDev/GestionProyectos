@@ -49,7 +49,7 @@ export function buildUnlockedTaskEmail(params: {
   toRecipients: GraphRecipient[];
 } {
   const { correo, nombre, predecessorTask, task, inputs } = params;
-  const subject = `Tarea desbloqueada: ${task.Title} (${task.Codigo})`;
+  const subject = `Tarea desbloqueada: ${task.nombre_tarea} (${task.codigo})`;
   const inputsHtml = buildInputsHtml(inputs, "Datos necesarios para realizar la tarea");
 
   /**
@@ -60,7 +60,7 @@ export function buildUnlockedTaskEmail(params: {
       <p>Hola <strong>${nombre ?? "Responsable"}</strong>,</p>
 
       <p>
-        Se ha desbloqueado la tarea: <strong>${task.Title}</strong> (${task.Codigo})
+        Se ha desbloqueado la tarea: <strong>${task.nombre_tarea}</strong> (${task.codigo})
         porque la tarea predecesora <strong>${predecessorTask.Title}</strong> (${predecessorTask.Codigo})
         fue completada.
       </p>
@@ -69,8 +69,8 @@ export function buildUnlockedTaskEmail(params: {
       <ul>
         <li><strong>Inicio:</strong> ${safeDateLabel(task.fechaInicio ?? "")}</li>
         <li><strong>Vence:</strong> ${safeDateLabel(task.FechaResolucion ?? "")}</li>
-        <li><strong>Fase:</strong> ${task.Phase ?? "-"}</li>
-        <li><strong>Duracion:</strong> ${task.Diaspararesolver ?? 0} dias</li>
+        <li><strong>Fase:</strong> ${task.fase ?? "-"}</li>
+        <li><strong>Duracion:</strong> ${task.dias_para_resolver ?? 0} dias</li>
       </ul>
 
       ${inputsHtml}

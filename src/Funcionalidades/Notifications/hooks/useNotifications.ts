@@ -1,10 +1,12 @@
 import * as React from "react";
 import { useGraphServices } from "../../../graph/graphContext";
 import type { projectTasks, taskResponsible } from "../../../models/AperturaTienda";
-import { useInsumosProyecto } from "../../Insumos";
+import { useInsumosProyecto } from "../../insumos";
 import type { SendUnlockedTaskNotificationArgs } from "../types";
 import { loadTaskInputs } from "../utils/loadTaskInputs";
 import { buildReturnedTaskEmail, buildUnlockedTaskEmail } from "../utils/templates";
+import { showWarning } from "../../../utils/toast";
+import { useRepositories } from "../../../repositories/repositoriesContext";
 
 /**
  * Hook orquestador para enviar notificaciones relacionadas con tareas.
@@ -16,11 +18,11 @@ import { buildReturnedTaskEmail, buildUnlockedTaskEmail } from "../utils/templat
  */
 export function useNotifications() {
   const graph = useGraphServices();
-  const { loadInsumosFiles } = useInsumosProyecto(graph.insumoProyecto);
+  const repositories = useRepositories()
+  const { loadInsumosFiles } = useInsumosProyecto(repositories.projectInsumo!);
 
-  const responsableRepo = graph.responsableProyecto;
-  const linksRepo = graph.tareaInsumoProyecto;
-  const insumoRepo = graph.insumoProyecto;
+  const linksRepo = repositories.proyectoTareaInsumo!;
+  const insumoRepo = repositories.projectInsumo!
   const mailSvc = graph.mail;
 
   /**
@@ -29,9 +31,18 @@ export function useNotifications() {
    * @param proyectoId - Identificador del proyecto al que pertenece la tarea.
    * @returns Insumos listos para ser incluidos en una notificación.
    */
-  const loadInputsForTask = React.useCallback((taskCodigo: string, proyectoId: string) =>
-      loadTaskInputs({linksRepo, insumoRepo, loadInsumosFiles,}, taskCodigo, proyectoId),
-    [insumoRepo, linksRepo, loadInsumosFiles]
+  const loadInputsForTask = React.useCallback((task_id: number, proyectoId: number) =>
+      loadTaskInputs(
+        {
+          linksRepo,
+          insumoRepo,
+          plantillaRepo: repositories.plantillaInsumos!,
+          loadInsumosFiles,
+        },
+        task_id,
+        proyectoId
+      ),
+    [insumoRepo, linksRepo, loadInsumosFiles, repositories.plantillaInsumos]
   );
 
   /**
@@ -44,27 +55,30 @@ export function useNotifications() {
       if (!unlockedTasks?.length) return;
 
       for (const task of unlockedTasks) {
-        const taskId = String(task.Id ?? "").trim();
+        const taskId = String(task.id ?? "").trim();
         if (!taskId) continue;
 
         const responsables: taskResponsible[] = (
-          await responsableRepo.getAll({
-            filter: `fields/IdTarea eq '${taskId}'`,
+          await repositories.projectTaskReponsible?.loadResponsible({
+            tarea_id: Number(taskId)
           })
-        ).items;
+        ) ?? [];
 
         if (!responsables?.length) continue;
 
-        const inputs = await loadInputsForTask(task.Codigo ?? "", task.IdProyecto);
+        const inputs = await loadInputsForTask(
+          Number(task.id),
+          Number(task.id_proyecto)
+        );
 
         await Promise.all(
           responsables.map(async (responsable) => {
-            const correo = (responsable.Correo ?? "").trim();
+            const correo = (responsable.correo ?? "").trim();
             if (!correo) return;
 
             const email = buildUnlockedTaskEmail({
               correo,
-              nombre: responsable.Title ?? "Responsable",
+              nombre: responsable.nombre ?? "Responsable",
               predecessorTask,
               task,
               inputs,
@@ -82,7 +96,7 @@ export function useNotifications() {
         );
       }
     },
-    [loadInputsForTask, mailSvc, responsableRepo]
+    [loadInputsForTask, mailSvc,]
   );
 
   /**
@@ -94,34 +108,35 @@ export function useNotifications() {
    */
   const sendReturnedTaskNotication = React.useCallback(
     async (actualTask: projectTasks, predessesorTask: projectTasks, motivo: string) => {
-      const predecessorTaskId = String(predessesorTask.Id ?? "").trim();
+      const predecessorTaskId = String(predessesorTask.id ?? "").trim();
 
       const responsablesPredessesor: taskResponsible[] = (
-        await responsableRepo.getAll({
-          filter: `fields/IdTarea eq '${predecessorTaskId}'`,
+        await repositories.projectTaskReponsible?.loadResponsible({
+          tarea_id: Number(predecessorTaskId),
         })
-      ).items;
+      ) ?? []
+
 
       if (!responsablesPredessesor?.length) {
-        alert("La tarea anterior no tiene responsables por lo que no se puede devolver");
+        showWarning("La tarea anterior no tiene responsables por lo que no se puede devolver");
         return;
       }
 
       const inputs = await loadInputsForTask(
-        predessesorTask.Codigo ?? "",
-        predessesorTask.IdProyecto
+        Number(predessesorTask.id),
+        Number(predessesorTask.id_proyecto)
       );
 
       await Promise.all(
         responsablesPredessesor.map(async (responsable) => {
-          const correo = (responsable.Correo ?? "").trim();
+          const correo = (responsable.correo ?? "").trim();
           if (!correo) return;
 
           const email = buildReturnedTaskEmail({
             correo,
             motivo,
-            actualTaskTitle: actualTask.Title,
-            predecessorTaskTitle: predessesorTask.Title,
+            actualTaskTitle: actualTask.nombre_tarea,
+            predecessorTaskTitle: predessesorTask.nombre_tarea,
             inputs,
           });
 
@@ -136,7 +151,7 @@ export function useNotifications() {
         })
       );
     },
-    [loadInputsForTask, mailSvc, responsableRepo]
+    [loadInputsForTask, mailSvc,]
   );
 
   /**

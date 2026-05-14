@@ -18,7 +18,7 @@ export function getNextTaskCode(rows: projectTasks[] | TemplateTasks[]): string 
   const prefix = "T";
 
   const numbers = rows
-    .map((t) => t.Codigo) //Mapea el codigo de cada Row
+    .map((t) => ("codigo" in t ? t.codigo : undefined)) //Mapea el codigo de cada Row
     .filter((c): c is string => typeof c === "string" && c.startsWith(prefix)) //Dejar todos los codigos que inician por T..
     .map((c) => parseInt(c.slice(prefix.length), 10)) //Elimina la T y deja como Int el numero
     .filter((n) => !Number.isNaN(n));  //Descarta todas las opciones que en los pasos anteriores no hayan quedado como INT
@@ -28,4 +28,3 @@ export function getNextTaskCode(rows: projectTasks[] | TemplateTasks[]): string 
 
   return `T${next}`;
 }
-

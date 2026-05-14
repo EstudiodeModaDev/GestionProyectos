@@ -3,6 +3,8 @@ import type { TemplateTasks } from "../../../models/AperturaTienda";
 import type { Plantilla } from "../Settings";
 import type { plantillaInsumos, plantillaTareaInsumo } from "../../../models/Insumos";
 import { getNextTaskCode } from "../../../utils/Tasks";
+import { tasksPhases } from "../../../const/tasksConsts";
+import { useAreas } from "../../../Funcionalidades/generalConfigs/areasConfig/useAreas";
 
 type TaskDetailModalProps = {
   open: boolean;
@@ -39,19 +41,26 @@ export default function TaskDetailModal({
   const [selectedTipoUso, setSelectedTipoUso] = React.useState<"Entrada" | "Salida">("Entrada");
   const [savingRel, setSavingRel] = React.useState(false);
   const [deletingRelId, setDeletingRelId] = React.useState<string | null>(null);
+  const areas = useAreas()
 
-  const taskCode = state.Codigo ?? "";
+  React.useEffect(() => {
+    if (open) {
+        void areas.loadAreasBD();
+    }}, [open]);
+
+  const taskCode = state.id ?? "";
 
   //Insumos relacionados a la tarea
   const linkedInsumos = React.useMemo(
-      () => links.filter((l) => l.Title === taskCode),
+      () => links.filter((l) => l.id_tarea_plantilla === taskCode),
       [links, taskCode]
   );
+
 
   const insumoById = React.useMemo(() => {
       const m = new Map<string, plantillaInsumos>();
       insumos.forEach((ins) => {
-          if (ins.Id) m.set(ins.Id, ins);
+          if (ins.id) m.set(ins.id, ins);
       });
       return m;
   }, [insumos]);
@@ -64,11 +73,10 @@ export default function TaskDetailModal({
       return;
     }
     cleanState();
-    setField("Codigo", getNextTaskCode(rows)); 
+    setField("codigo", getNextTaskCode(rows)); 
   }, [open, tarea, rows,]);
 
   
-
   /**
    * Guarda la tarea en modo creacion o edicion segun el contexto.
    *
@@ -76,27 +84,24 @@ export default function TaskDetailModal({
    */
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (isEdit && state.Id) {
-          await onSaveEditar(state.Id);
+      if (isEdit && state.id) {
+          await onSaveEditar(state.id);
       } else {
           await onSaveNueva();
       }
   };
 
-  
 
   /**
    * Elimina la tarea actual y cierra el modal.
    */
   const handleDeleteClick = async () => {
-      if (!state.Id) return;
-      await onEliminarTarea(state.Id);
+      if (!state.id) return;
+      await onEliminarTarea(state.id);
       onClose();
   };
 
   // ================== Relaciones con insumos ==================
-
-  
 
   /**
    * Crea una relacion entre la tarea actual y un insumo de plantilla.
@@ -112,8 +117,6 @@ export default function TaskDetailModal({
         setSavingRel(false);
     }
   };
-
-  
 
   /**
    * Elimina una relacion existente entre tarea e insumo.
@@ -152,22 +155,43 @@ export default function TaskDetailModal({
               <div className="tp-detail-form__grid">
               <label className="tp-field">
                 <span className="tp-field__label">Código de la tarea</span>
-                <input className="tp-field__input" value={state.Codigo ?? ""} readOnly/>
+                <input className="tp-field__input" value={state.codigo ?? ""} readOnly/>
               </label>
 
               <label className="tp-field">
                 <span className="tp-field__label">Título de la tarea</span>
-                <input className="tp-field__input" value={state.Title ?? ""} onChange={(e) => setField("Title", e.target.value as TemplateTasks["Title"])} required/>
+                <input className="tp-field__input" value={state.nombre_tarea ?? ""} onChange={(e) => setField("nombre_tarea", e.target.value as TemplateTasks["nombre_tarea"])} required/>
               </label>
 
               <label className="tp-field"> 
                 <span className="tp-field__label">Fase</span>
-                <input className="tp-field__input" value={state.Phase ?? ""} onChange={(e) => setField("Phase", e.target.value as TemplateTasks["Phase"])} required/>
+                <select className="tp-field__input" value={state.fase ?? ""} onChange={(e) => setField("fase", e.target.value)}>
+                    <option value="">Ninguna</option>
+                        {tasksPhases.map((f) => {
+                            return (
+                                <option key={f} value={f}>{f}</option>
+                            );
+                        })}
+                </select>
+              </label>
+
+              <label className="tp-field"> 
+                <span className="tp-field__label">Área responsable</span>
+                <select className="tp-field__input" value={state.area_responsable ?? ""} onChange={(e) => setField("area_responsable", e.target.value)}>
+                    <option value="">Ninguna</option>
+                        {areas.areas.map((f) => {
+                            return (
+                                <option key={f.nombre_area} value={f.nombre_area}>
+                                    {f.nombre_area}
+                                </option>
+                            );
+                        })}
+                </select>
               </label>
 
               <label className="tp-field">
                 <span className="tp-field__label">Tipo de tarea</span>
-                <select className="tp-field__input" value={state.TipoTarea ?? ""} onChange={(e) => setField("TipoTarea", e.target.value as TemplateTasks["TipoTarea"])}>
+                <select className="tp-field__input" value={state.tipo_tarea ?? ""} onChange={(e) => setField("tipo_tarea", e.target.value as TemplateTasks["tipo_tarea"])}>
                   <option value="">Selecciona…</option>
                   <option value="Media">Media</option>
                   <option value="Crítica">Crítica</option>
@@ -177,22 +201,22 @@ export default function TaskDetailModal({
               <div className="tp-row-2">
                 <label className="tp-field">
                   <span className="tp-field__label">Días para resolver</span>
-                  <input className="tp-field__input tp-field__input_xs" type="number" min={0} value={state.Diaspararesolver ?? 0} onChange={(e) => setField("Diaspararesolver", Number(e.target.value) as TemplateTasks["Diaspararesolver"])}/>
+                  <input className="tp-field__input tp-field__input_xs" type="number" min={0} value={state.dias_para_resolver ?? 0} onChange={(e) => setField("dias_para_resolver", Number(e.target.value) as TemplateTasks["dias_para_resolver"])}/>
                 </label>
 
                 <label className="tp-field tp-field--checkbox">
                   <span className="tp-field__label">¿Cuenta solo días hábiles?</span>
-                  <input className="tp-field__checkbox" type="checkbox" checked={!!state.diasHabiles} onChange={(e) => setField("diasHabiles", e.target.checked)}/>
+                  <input className="tp-field__checkbox" type="checkbox" checked={!!state.dias_habiles} onChange={(e) => setField("dias_habiles", e.target.checked)}/>
                 </label>
               </div>
 
               <label className="tp-field">
                   <span className="tp-field__label">Depende de</span>
-                  <select className="tp-field__input" value={state.Dependencia ?? ""} onChange={(e) => setField( "Dependencia", e.target.value as TemplateTasks["Dependencia"])}>
+                  <select className="tp-field__input" value={state.dependencia ?? ""} onChange={(e) => setField( "dependencia", Number(e.target.value ?? null) as TemplateTasks["dependencia"])}>
                       <option value="">Ninguna</option>
                       {rows.map((t) => {
-                          const code = t.Codigo ?? "";
-                          const title = t.Title ?? "";
+                          const code = t.id ?? "";
+                          const title = t.nombre_tarea ?? "";
                           return (
                               <option key={code} value={code}>{code} - {title}</option>
                           );
@@ -216,22 +240,22 @@ export default function TaskDetailModal({
                 ) : (
                     <ul className="tp-detail-insumos__list">
                         {linkedInsumos.map((link) => {
-                            const ins = link.IdInsumo ? insumoById.get(link.IdInsumo) : undefined;
-                            const nombre = ins?.Title ?? "Insumo eliminado";
-                            const tipoUso = (link.TipoInsumo as "Entrada" | "Salida") || "Entrada";
+                            const ins = link.id_insumo ? insumoById.get(link.id_insumo) : undefined;
+                            const nombre = ins?.nombre_insumo ?? "Insumo eliminado";
+                            const tipoUso = (link.tipo_insumo as "Entrada" | "Salida") || "Entrada";
 
                             return (
-                                <li className="tp-detail-insumos__item" key={link.Id ?? `${link.Title}-${link.IdInsumo}`}>
+                                <li className="tp-detail-insumos__item" key={link.id ?? `${link.id_tarea_plantilla}-${link.id_insumo}`}>
                                     <div className="tp-detail-insumos__item-main">
                                         <span className="tp-detail-insumos__item-title">{nombre}</span>
-                                        <span className="tp-detail-insumos__item-sub">Tarea {link.Title} · {tipoUso}</span>
+                                        <span className="tp-detail-insumos__item-sub">Tarea {state.codigo} · {tipoUso}</span>
                                     </div>
 
                                     <div className="tp-detail-insumos__item-side">
                                         <span className={"tp-chip " + (tipoUso === "Entrada" ? "tp-chip--soft" : "tp-chip--primary")}>{tipoUso}</span>
-                                        {link.Id && (
-                                            <button type="button" className="tp-btn tp-btn--ghost tp-btn--xs" onClick={() => handleDeleteRelation(link.Id!)} disabled={deletingRelId === link.Id}>
-                                                {deletingRelId === link.Id ? "Eliminando..." :"Quitar"}  
+                                        {link.id && (
+                                            <button type="button" className="tp-btn tp-btn--ghost tp-btn--xs" onClick={() => handleDeleteRelation(link.id!)} disabled={deletingRelId === link.id}>
+                                                {deletingRelId === link.id ? "Eliminando..." :"Quitar"}  
                                             </button>
                                         )}
                                     </div>
@@ -250,8 +274,8 @@ export default function TaskDetailModal({
                                 <select className="tp-field__input" value={selectedInsumoId} onChange={(e) => setSelectedInsumoId(e.target.value)}>
                                 <option value="">Selecciona un insumo…</option>
                                     {insumos.map((ins) =>
-                                        ins.Id ? (
-                                        <option key={ins.Id} value={ins.Id}>{ins.Title} ({ins.Categoria})</option>) : null
+                                        ins.id ? (
+                                        <option key={ins.id} value={ins.id}>{ins.nombre_insumo} ({ins.categoria})</option>) : null
                                     )}
                             </select>
                         </label>
@@ -275,7 +299,7 @@ export default function TaskDetailModal({
 }
             <footer className="tp-detail-form__footer">
                 <div className="tp-detail-form__footer-left">
-                    {isEdit && state.Id && (
+                    {isEdit && state.id && (
                         <button type="button" className="tp-btn tp-btn--danger" onClick={handleDeleteClick}>
                             Eliminar tarea
                         </button>

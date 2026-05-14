@@ -1,13 +1,13 @@
 import * as React from "react";
 import type { ProjectSP } from "../../../models/Projects";
-import type { ProyectosServices } from "../../../services/Projets.service";
+import type { ProjectRepository } from "../../../repositories/ProjectRepository/ProjectRepository";
 
 /**
  * Administra la colección de proyectos y su estado de carga.
  * @param proyectosSvc - Servicio de acceso a datos de proyectos.
  * @returns Lista de proyectos y operaciones de recarga.
  */
-export function useProjectsList(proyectosSvc: ProyectosServices) {
+export function useProjectsList(proyectosSvc: ProjectRepository) {
   const [rows, setRows] = React.useState<ProjectSP[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -20,7 +20,7 @@ export function useProjectsList(proyectosSvc: ProyectosServices) {
     setLoading(true);
     setError(null);
     try {
-      const items = await proyectosSvc.getAllPlain();
+      const items = await proyectosSvc.loadProjects();
       setRows(items);
       return items;
     } catch (e: any) {

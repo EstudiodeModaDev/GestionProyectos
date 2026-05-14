@@ -1,6 +1,7 @@
 import React from "react";
 import type { Plantilla } from "../Settings";
 import type { plantillaInsumos } from "../../../models/Insumos";
+import { ConfirmActionModal } from "../../confirmationModal/ConfirmActionModal";
 
 type InsumoDetailModalProps = {
   open: boolean;
@@ -24,21 +25,24 @@ type InsumoDetailModalProps = {
  */
 export const InsumoDetailModal: React.FC<InsumoDetailModalProps> = ({open, plantilla, insumo, onClose, state, setField, onCrearInsumo, onEditarInsumo, onEliminarInsumo, accion}) => {
     const isEdit = Boolean(insumo);
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
 
     React.useEffect(() => {
         if (!open) return;
 
         if (insumo) {
-            setField("Id", (insumo.Id ?? "") as plantillaInsumos["Id"]);
-            setField("Title", (insumo.Title ?? "") as plantillaInsumos["Title"]);
-            setField("Proceso", (insumo.Proceso ?? accion) as plantillaInsumos["Proceso"]);
+            setField("id", (insumo.id ?? "") as plantillaInsumos["id"]);
+            setField("nombre_insumo", (insumo.nombre_insumo ?? "") as plantillaInsumos["nombre_insumo"]);
+            setField("proceso", (insumo.proceso ?? accion) as plantillaInsumos["proceso"]);
+            setField("is_active", (insumo.is_active ?? true) as plantillaInsumos["is_active"]);
         } else {
-            setField("Id", undefined as any);
-            setField("Title", "" as plantillaInsumos["Title"]);
-            setField("Proceso", accion as plantillaInsumos["Proceso"]);
+            setField("id", undefined as any);
+            setField("nombre_insumo", "" as plantillaInsumos["nombre_insumo"]);
+            setField("proceso", accion as plantillaInsumos["proceso"]);
+            setField("is_active", true as plantillaInsumos["is_active"]);
         }
 
-        setField("Categoria", "Archivo" as plantillaInsumos["Categoria"]);
+        setField("categoria", "Archivo" as plantillaInsumos["categoria"]);
     }, [open, insumo, accion]);
 
   if (!open) return null;
@@ -53,8 +57,8 @@ export const InsumoDetailModal: React.FC<InsumoDetailModalProps> = ({open, plant
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isEdit && state.Id) {
-      await onEditarInsumo(state.Id, accion);
+    if (isEdit && state.id) {
+      await onEditarInsumo(state.id, accion);
     } else {
       await onCrearInsumo(accion);
     }
@@ -68,17 +72,8 @@ export const InsumoDetailModal: React.FC<InsumoDetailModalProps> = ({open, plant
    * Confirma y elimina el insumo actualmente seleccionado.
    */
   const handleDeleteClick = async () => {
-    if (!state.Id) return;
-
-    const ok = window.confirm(
-      `¿Seguro que deseas eliminar el insumo "${state.Title}"?\n` +
-        "Esta acción no se puede deshacer."
-    );
-
-    if (!ok) return;
-
-    await onEliminarInsumo(state.Id, accion);
-    onClose();
+    if (!state.id) return;
+    setConfirmDeleteOpen(true);
   };
 
   return (
@@ -105,12 +100,12 @@ export const InsumoDetailModal: React.FC<InsumoDetailModalProps> = ({open, plant
                     <div className="tp-detail-form__grid">
                         <label className="tp-field">
                             <span className="tp-field__label">Nombre del insumo</span>
-                            <input className="tp-field__input" value={state.Title} onChange={(e) => setField("Title", e.target.value as plantillaInsumos["Title"])} required/>
+                            <input className="tp-field__input" value={state.nombre_insumo} onChange={(e) => setField("nombre_insumo", e.target.value as plantillaInsumos["nombre_insumo"])} required/>
                         </label>
 
                         <label className="tp-field">
                             <span className="tp-field__label">Tipo del insumo</span>
-                            <select className="tp-field__input" value={state.Categoria} onChange={(e) => setField("Categoria", e.target.value as plantillaInsumos["Categoria"])} required>
+                            <select className="tp-field__input" value={state.categoria} onChange={(e) => setField("categoria", e.target.value as plantillaInsumos["categoria"])} required>
                               <option value="">Selecciona el tipo de categoria</option>
                               <option value="Archivo">Archivo</option>
                               <option value="Texto">Texto</option>
@@ -122,7 +117,7 @@ export const InsumoDetailModal: React.FC<InsumoDetailModalProps> = ({open, plant
                     <footer className="tp-detail-form__footer">
                         {isEdit && (
                             <button type="button" className="tp-btn tp-btn--danger" onClick={handleDeleteClick}>
-                                Eliminar
+                                {state.is_active ? "Desactivar insumo" : "Reactivar insumo"}
                             </button>
                         )}
 
@@ -139,6 +134,18 @@ export const InsumoDetailModal: React.FC<InsumoDetailModalProps> = ({open, plant
                 </form>
             </div>
         </section>
+
+      <ConfirmActionModal
+        open={confirmDeleteOpen}
+        text={`¿Seguro que deseas ${state.is_active ? "desactivar" : "reactivar"} el insumo "${state.nombre_insumo}"?`}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        onConfirm={async () => {
+          if (!state.id) return;
+          await onEliminarInsumo(state.id, accion);
+          setConfirmDeleteOpen(false);
+          onClose();
+        }}
+      />
     </>
   );
 };

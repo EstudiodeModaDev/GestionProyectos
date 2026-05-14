@@ -1,0 +1,7 @@
+project_id = "your-project-ref"
+
+[functions.api]
+verify_jwt = false
+
+[functions.upload-insumo]
+verify_jwt = false

@@ -2,13 +2,14 @@
 import React from "react";
 import "./Kanban.css";
 import type { ProjectSP } from "../../models/Projects";
-import type { projectTasks, taskResponsible } from "../../models/AperturaTienda";
-import { useGraphServices } from "../../graph/graphContext";
+import type { projectTasks } from "../../models/AperturaTienda";
 import { TaskDetailModal } from "../DetallesTarea/DetallesTarea";
 import { useTasks } from "../../Funcionalidades/ProjectTasksHooks/useProjectTasks";
+import { useTaskResponsables } from "../../Funcionalidades/taskResponsible/useTaskResponsables";
 import { normalize } from "../../utils/commons";
 import KanbanHeader from "./Components/Toolbar";
 import KanbanCard from "./Components/KanbanCard";
+import { useRepositories } from "../../repositories/repositoriesContext";
 
 export type KanbanEstado = "Pendiente" | "En Proceso" | "Completada";
 
@@ -30,15 +31,13 @@ type Props = {
  * @returns Tablero por columnas con tareas arrastrables y modal de detalle.
  */
 const KanbanApertura: React.FC<Props> = ({project, responsablesMap, fases,}) => {
-  const graph = useGraphServices();
-  const projectTasks = useTasks(graph.tasks);
+  const repositories = useRepositories();
+  const projectTasks = useTasks(repositories.projectTasks!);
 
   const [detalles, setDetalles] = React.useState<boolean>(false);
   const [selectedTask, setSelectedTask] = React.useState<projectTasks | null>(null);
   const [predesesor, setPredecesor] = React.useState<projectTasks | null>(null);
   const [sucessors, setSurcessors] = React.useState<projectTasks[]>([]);
-  const [respByTaskId, setRespByTaskId] = React.useState<Record<string, taskResponsible[]>>({});
-  const [respLoading, setRespLoading] = React.useState(false);
 
   const handleDrop = (ev: React.DragEvent<HTMLDivElement>, targetPhase: string, projectId: string) => {
     ev.preventDefault();
@@ -50,72 +49,22 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, fases,}) => 
 
   // Cargar tareas cuando cambien filtros/proyecto
   React.useEffect(() => {
-    void projectTasks.loadProjectTasks(project.Id ?? "");
-  }, [project.Id, projectTasks.filters.search, projectTasks.filters.responsable, projectTasks.filters.soloIncompletas,]);
+    void projectTasks.loadProjectTasks(project.id ?? "");
+  }, [project.id, projectTasks.filters.search, projectTasks.filters.responsable, projectTasks.filters.soloIncompletas,]);
 
-  // Cargar responsables del proyecto cuando cambien las tareas o el proyecto
-  React.useEffect(() => {
-    let cancelled = false;
+  const taskIds = React.useMemo(
+    () => (projectTasks.tasks ?? []).map((task) => String(task.id ?? "").trim()).filter(Boolean),
+    [projectTasks.tasks]
+  );
 
-    (async () => {
-      const pid = project.Id ?? "";
-      if (!pid) return;
-
-      setRespLoading(true);
-
-      try {
-        const ids = (projectTasks.tasks ?? []).map((t) => String(t.Id ?? "").trim()).filter(Boolean);
-
-        if (!ids.length) {
-          if (!cancelled) setRespByTaskId({});
-          return;
-        }
-
-        const CHUNK = 20;
-        const map: Record<string, taskResponsible[]> = {};
-
-        
-
-        /**
-         * Construye un filtro OData para consultar responsables por grupos de tareas.
-         *
-         * @param values - Identificadores de tarea incluidos en la consulta.
-         * @returns Filtro combinado con clausulas `or`.
-         */
-        const buildOrFilter = (values: string[]) => values.map((v) => `fields/IdTarea eq '${v}'`).join(" or ");
-
-        for (let i = 0; i < ids.length; i += CHUNK) {
-          const part = ids.slice(i, i + CHUNK);
-          const filter = buildOrFilter(part);
-
-          const rows = await graph.responsableProyecto.getAll({filter, top: 10000,});
-
-          for (const r of rows.items ?? []) {
-            const taskId = String((r as any).IdTarea ?? "").trim();
-            if (!taskId) continue;
-            if (!map[taskId]) map[taskId] = [];
-            map[taskId].push(r);
-          }
-        }
-
-        if (!cancelled) setRespByTaskId(map);
-      } catch (e: any) {
-        if (!cancelled) {
-          setRespByTaskId({});
-        }
-      } finally {
-        if (!cancelled) setRespLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [project.Id, projectTasks.tasks, graph]);
+  const {
+    responsablesByTaskId: respByTaskId,
+    responsablesLoading: respLoading,
+  } = useTaskResponsables(taskIds);
 
   // Predecesor y sucesores cuando cambie la tarea seleccionada
   React.useEffect(() => {
-    if (!selectedTask?.Id) {
+    if (!selectedTask?.id) {
       setPredecesor(null);
       setSurcessors([]);
       return;
@@ -124,9 +73,15 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, fases,}) => 
     let cancelled = false;
 
     (async () => {
-      const predecessorTask = selectedTask.Dependencia ? await projectTasks.getPredecessorByCodigo(selectedTask.Dependencia || "", selectedTask.IdProyecto) : null;
+      const projectId = selectedTask.IdProyecto ?? selectedTask.id_proyecto ?? "";
+      const predecessorTask = selectedTask.dependencia
+        ? await projectTasks.getPredecessorByCodigo(selectedTask.dependencia || 0, projectId)
+        : null;
 
-      const sucessorsTasks = await projectTasks.getSuccessorsByCodigo(selectedTask.Codigo || "", selectedTask.IdProyecto);
+      const sucessorsTasks = await projectTasks.getSuccessorsByCodigo(
+        selectedTask.id_tarea_plantilla,
+        projectId
+      );
 
       if (!cancelled) {
         setPredecesor(predecessorTask);
@@ -154,13 +109,13 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, fases,}) => 
       return match ? Number(match[1]) : Number.POSITIVE_INFINITY;
     };
 
-    const aNumber = parseTaskNumber(a.Codigo);
-    const bNumber = parseTaskNumber(b.Codigo);
+    const aNumber = parseTaskNumber(a.codigo);
+    const bNumber = parseTaskNumber(b.codigo);
 
     if (aNumber !== bNumber) return aNumber - bNumber;
 
-    return String(a.Codigo ?? a.Title ?? a.Id ?? "").localeCompare(
-      String(b.Codigo ?? b.Title ?? b.Id ?? ""),
+    return String(a.codigo ?? a.nombre_tarea ?? a.id ?? "").localeCompare(
+      String(b.codigo ?? b.nombre_tarea ?? b.id ?? ""),
       undefined,
       { numeric: true, sensitivity: "base" }
     );
@@ -169,7 +124,7 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, fases,}) => 
   /* ========= RESPONSABLES (FILTRO + UI) ========= */
 
   const getTaskResponsables = React.useCallback(
-    (t: projectTasks) => respByTaskId[String(t.Id ?? "")] ?? [],
+    (t: projectTasks) => respByTaskId[String(t.id ?? "")] ?? [],
     [respByTaskId]
   );
 
@@ -180,7 +135,7 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, fases,}) => 
 
       const selectedMail = selected.toLowerCase().trim();
       const resps = getTaskResponsables(t);
-      return resps.some((r) => (r.Correo ?? "").toLowerCase().trim() === selectedMail);
+      return resps.some((r) => (r.correo ?? "").toLowerCase().trim() === selectedMail);
     },
     [projectTasks.filters.responsable, getTaskResponsables]
   );
@@ -207,7 +162,7 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, fases,}) => 
       <section className="kb-board">
         {fases.map((phase) => {
           const tasksInPhase = (projectTasks.tasks ?? [])
-            .filter((t) => normalize(t.Phase) === normalize(phase.name))
+            .filter((t) => normalize(t.fase) === normalize(phase.name))
             .filter(passesResponsableFilter)
             .sort(compareTasksByCodigo);
 
@@ -218,14 +173,14 @@ const KanbanApertura: React.FC<Props> = ({project, responsablesMap, fases,}) => 
                 <span className="kb-column-badge">{tasksInPhase.length}</span>
               </header>
 
-              <div className="kb-column-body" onDragOver={handleDragOver} onDrop={(ev) => handleDrop(ev, phase.name, project.Id ?? "")}>
+              <div className="kb-column-body" onDragOver={handleDragOver} onDrop={(ev) => handleDrop(ev, phase.name, project.id ?? "")}>
                 {tasksInPhase.map((task) => (
                   <KanbanCard 
                     task={task} 
                     tasks={tasksInPhase} 
                     onClick={handleClick} 
                     respByTaskId={respByTaskId} 
-                    key={task.Id}
+                    key={task.id}
                     responsablesMap={responsablesMap}
                   />
                 ))}

@@ -12,15 +12,18 @@
   },
   "dependencies": {
     "@azure/msal-browser": "^4.26.2",
+    "@cyntler/react-doc-viewer": "^1.17.1",
     "@date-fns/tz": "^1.4.1",
     "@mantine/core": "^8.3.16",
+    "@supabase/supabase-js": "^2.105.4",
     "date-fns": "^4.1.0",
     "festivos-colombianos": "^1.1.0",
     "puppeteer": "^24.42.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.14.1",
-    "react-select": "^5.10.2"
+    "react-select": "^5.10.2",
+    "react-toastify": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

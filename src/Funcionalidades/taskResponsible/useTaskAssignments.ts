@@ -3,8 +3,8 @@ import type { projectTasks } from "../../models/AperturaTienda";
 import { useAsyncStatus } from "../commons/useAsyncStatus";
 import { useTasksRepository } from "../ProjectTasksHooks/useTasksRepository";
 import { useAuth } from "../../auth/authProvider";
-import { useGraphServices } from "../../graph/graphContext";
 import type { useResponsableTareaRepository } from "./useResponsableTareaRepository";
+import { useRepositories } from "../../repositories/repositoriesContext";
 
 /**
  * Expone validaciones y métricas ligadas a asignación de responsables.
@@ -15,7 +15,7 @@ import type { useResponsableTareaRepository } from "./useResponsableTareaReposit
 export function useTaskAssignments(taskRepo: ReturnType<typeof useTasksRepository>, responsableRepo: ReturnType<typeof useResponsableTareaRepository>) {
   const { account } = useAuth();
   const status = useAsyncStatus();
-  const graph = useGraphServices();
+  const repositories = useRepositories()
 
   /**
    * Cuenta cuántas tareas de un proyecto no tienen responsables asignados.
@@ -26,14 +26,14 @@ export function useTaskAssignments(taskRepo: ReturnType<typeof useTasksRepositor
     async (projectId: string) => {
       status.start();
       try {
-        const tasks = await taskRepo.getAll({ filter: `fields/IdProyecto eq '${projectId}'`, top: 10000 });
+        const tasks = await taskRepo.getAll({ id_proyecto: Number(projectId)});
         const taskIds = (tasks ?? [])
-          .map((t) => String(t.Id ?? "").trim())
+          .map((t) => String(t.id ?? "").trim())
           .filter(Boolean);
 
         if (taskIds.length === 0) return 0;
 
-        const responsables = (await graph.responsableProyecto.getAll({ top: 10000 })).items;
+        const responsables = (await repositories.projectTaskReponsible?.loadResponsible());
 
         const taskIdSet = new Set(taskIds);
         const assignedSet = new Set<string>();
@@ -56,7 +56,7 @@ export function useTaskAssignments(taskRepo: ReturnType<typeof useTasksRepositor
         status.stop();
       }
     },
-    [taskRepo, status, graph]
+    [taskRepo, status,]
   );
 
   /**
@@ -66,16 +66,16 @@ export function useTaskAssignments(taskRepo: ReturnType<typeof useTasksRepositor
    */
   const canComplete = React.useCallback(async (task: projectTasks): Promise<boolean> => {
     try {
-      if (!task?.Id) return false;
+      if (!task?.id) return false;
 
-      const responsables = await responsableRepo.getByTaskId(task.Id);
+      const responsables = await responsableRepo.getByTaskId(Number(task.id));
 
       if (!responsables?.length) return false;
 
       const userEmail = account?.username?.toLowerCase().trim();
 
       return responsables.some(
-        (r) => r.Correo?.toLowerCase().trim() === userEmail
+        (r) => r.correo?.toLowerCase().trim() === userEmail
       );
     } catch {
       return false;

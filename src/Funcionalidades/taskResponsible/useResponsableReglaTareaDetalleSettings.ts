@@ -1,12 +1,12 @@
 import * as React from "react";
 import type { responsableReglaTareaDetalle } from "../../models/responsables";
-import { useGraphServices } from "../../graph/graphContext";
+import { useRepositories } from "../../repositories/repositoriesContext";
+import type { filterResponsibleDetail } from "../../repositories/ResponsibleDetailReposiitory/responsibleDetailRespository";
 
 const emptyState: responsableReglaTareaDetalle = {
-  Title: "",
-  reglaId: 0,
-  Nombre: "",
-  Correo: "",
+  regla_id: "",
+  nombre: "",
+  correo: "",
 };
 
 /**
@@ -14,7 +14,7 @@ const emptyState: responsableReglaTareaDetalle = {
  * @returns Estado, formulario y operaciones CRUD de detalles.
  */
 export function useResponsableReglaTareaDetalleSettings() {
-  const graph = useGraphServices();
+  const repositories = useRepositories();
   const [detalles, setDetalles] = React.useState<responsableReglaTareaDetalle[]>([]);
   const [state, setState] = React.useState<responsableReglaTareaDetalle>(emptyState);
   const [loading, setLoading] = React.useState(false);
@@ -40,11 +40,10 @@ export function useResponsableReglaTareaDetalleSettings() {
     }
 
     setState({
-      Title: item.Title ?? "",
-      reglaId: item.reglaId ?? "",
-      Nombre: item.Nombre ?? "",
-      Correo: item.Correo ?? "",
-      Id: item.Id,
+      regla_id: item.regla_id ?? "",
+      nombre: item.nombre ?? "",
+      correo: item.correo ?? "",
+      id: item.id,
     });
   }, []);
 
@@ -56,21 +55,20 @@ export function useResponsableReglaTareaDetalleSettings() {
   }, []);
 
   /**
-   * Carga los detalles de una regla específica o todos si no se indica una.
-   * @param reglaId - Identificador opcional de la regla.
+   * Carga los detalles de una regla específica.
+   * @param reglaId - Identificador de la regla.
    * @returns Detalles recuperados.
    */
-  const loadDetalles = React.useCallback(async (reglaId?: string) => {
+  const loadDetalles = React.useCallback(async (filter?: filterResponsibleDetail) => {
+    if (!filter?.reglaId) {
+      setDetalles([]);
+      return [];
+    }
+
     setLoading(true);
     setError(null);
     try {
-      let filter = "";
-
-      if (reglaId) {
-        filter = `fields/reglaId eq ${Number(reglaId)}`;
-      }
-
-      const items = (await graph.responsableReglaDetalle.getAll({ filter, top: 5000 })).items;
+      const items = (await repositories.responsablesDetalles?.loadDetail(filter)) ?? [];
 
       setDetalles(items);
       return items;
@@ -81,7 +79,7 @@ export function useResponsableReglaTareaDetalleSettings() {
     } finally {
       setLoading(false);
     }
-  }, [graph.responsableReglaDetalle]);
+  }, [repositories.responsablesDetalles]);
 
   /**
    * Crea un nuevo detalle para una regla.
@@ -93,10 +91,14 @@ export function useResponsableReglaTareaDetalleSettings() {
     setLoading(true);
     setError(null);
     try {
-      const created = await graph.responsableReglaDetalle.create({
+      const created = await repositories.responsablesDetalles?.createDetail({
         ...payload,
-        reglaId: Number(reglaId),
+        regla_id: reglaId,
       });
+
+      if (!created) {
+        throw new Error("No fue posible crear el detalle.");
+      }
 
       setDetalles((prev) => [...prev, created]);
       return created;
@@ -106,7 +108,7 @@ export function useResponsableReglaTareaDetalleSettings() {
     } finally {
       setLoading(false);
     }
-  }, [graph.responsableReglaDetalle]);
+  }, [repositories.responsablesDetalles]);
 
   /**
    * Edita un detalle existente.
@@ -118,8 +120,11 @@ export function useResponsableReglaTareaDetalleSettings() {
     setLoading(true);
     setError(null);
     try {
-      const updated = await graph.responsableReglaDetalle.update(id, payload);
-      setDetalles((prev) => prev.map((item) => (String(item.Id) === String(id) ? updated : item)));
+      const updated = await repositories.responsablesDetalles?.updateDetail(id, payload);
+      if (!updated) {
+        throw new Error("No fue posible actualizar el detalle.");
+      }
+      setDetalles((prev) => prev.map((item) => (String(item.id) === String(id) ? updated : item)));
       return updated;
     } catch (e) {
       setError(e);
@@ -127,7 +132,7 @@ export function useResponsableReglaTareaDetalleSettings() {
     } finally {
       setLoading(false);
     }
-  }, [graph.responsableReglaDetalle]);
+  }, [repositories.responsablesDetalles]);
 
   /**
    * Elimina un detalle existente.
@@ -137,15 +142,15 @@ export function useResponsableReglaTareaDetalleSettings() {
     setLoading(true);
     setError(null);
     try {
-      await graph.responsableReglaDetalle.delete(id);
-      setDetalles((prev) => prev.filter((item) => String(item.Id) !== String(id)));
+      await repositories.responsablesDetalles?.deleteDetail(Number(id));
+      setDetalles((prev) => prev.filter((item) => String(item.id) !== String(id)));
     } catch (e) {
       setError(e);
       throw e;
     } finally {
       setLoading(false);
     }
-  }, [graph.responsableReglaDetalle]);
+  }, [repositories.responsablesDetalles]);
 
   return {
     detalles,

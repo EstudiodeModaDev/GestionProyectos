@@ -1,22 +1,21 @@
 export type responsableReglaTarea = {
-  Id?: string;
-  Title: string //Codigo de la tarea
-  Marca: string;
-  Ciudad: string;
+  id?: string;
+  template_task_id: number | null //Codigo de la tarea
+  id_marca: number | null;
+  id_zona: number | null;
 }
 
 export type responsableReglaTareaDetalle = {
-  Id?: string;
-  Title: string //Codigo de la tarea
-  Correo: string;
-  Nombre: string;
-  reglaId: number;
+  id?: string;
+  regla_id: string //Codigo de la tarea
+  nombre: string;
+  correo: string;
 }
 
 export type jefeZona = {
-  Id?: string;
-  Title: string //Marca
-  Zona: string;
-  JefeNombre: string;
-  JefeCorreo: string;
+  id?: string;
+  id_marca: string //Marca
+  id_zona: string;
+  jefe_nombre: string;
+  jefe_correo: string;
 }

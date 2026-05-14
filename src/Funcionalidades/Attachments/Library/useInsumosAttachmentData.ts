@@ -1,7 +1,7 @@
 import * as React from "react";
-import { useGraphServices } from "../../../graph/graphContext";
 import type { Archivo } from "../../../models/Files";
 import type { InsumoProyecto } from "../../../models/Insumos";
+import { useSupabaseApi } from "../../Supabase/useSupabaseApi";
 
 type UseTicketDataParams = {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>;
@@ -14,7 +14,7 @@ type UseTicketDataParams = {
  * @returns Operación de carga de adjuntos.
  */
 export function useInsumosAttachmentData({ setLoading, setError }: UseTicketDataParams) {
-  const graph = useGraphServices();
+  const api = useSupabaseApi();
 
   /**
    * Carga los archivos asociados a los insumos recibidos.
@@ -28,11 +28,24 @@ export function useInsumosAttachmentData({ setLoading, setError }: UseTicketData
     try {
       const archivos: Archivo[] = [];
       for (const item of items) {
-        console.log(item);
-        const file = await graph.taskFilesInsumos.getFileById(item.insumoId);
-        if (file) {
-          archivos.push(file);
-        }
+        const filePath = String(item.file_path ?? "").trim();
+        if (!filePath) continue;
+
+        const signed = await api.call<{ signedUrl: string }>("taskInsumos.signedUrl", {
+          file_path: filePath,
+          expires_in: 600,
+        });
+
+        if (!signed?.signedUrl) continue;
+
+        archivos.push({
+          id: String(item.id ?? filePath),
+          name: String(item.file_name ?? filePath.split("/").pop() ?? "archivo"),
+          webUrl: signed.signedUrl,
+          isFolder: false,
+          mimeType: String(item.mime_type ?? "").trim() || undefined,
+          path: filePath,
+        });
       }
       return archivos;
     } catch (e: any) {
@@ -42,7 +55,7 @@ export function useInsumosAttachmentData({ setLoading, setError }: UseTicketData
     } finally {
       setLoading(false);
     }
-  }, [setLoading, setError]);
+  }, [api, setLoading, setError]);
 
   return { load };
 }

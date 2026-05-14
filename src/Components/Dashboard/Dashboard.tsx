@@ -1,6 +1,5 @@
 import React from "react";
 import type { Kpm, ProjectSP } from "../../models/Projects";
-import { useGraphServices } from "../../graph/graphContext";
 
 import "./Dashboard.css"
 import { ParseDateShow } from "../../utils/Date";
@@ -8,7 +7,12 @@ import { NuevoProyectoModal } from "../NuevoProyectoModal/NuevoProyectoModal";
 import { RenombrarProyectoModal } from "../EditarNombre/EditarNombreModal";
 import { useTasks } from "../../Funcionalidades/ProjectTasksHooks/useProjectTasks";
 import { useProjects } from "../../Funcionalidades/Projects/useProjects";
+import { useTaskResponsables } from "../../Funcionalidades/taskResponsible/useTaskResponsables";
 import { Link } from "react-router-dom";
+import { useRepositories } from "../../repositories/repositoriesContext";
+
+const normalizeEstado = (estado?: string | null) =>
+  (estado ?? "").toLocaleLowerCase().trim();
 
 /**
  * Presenta el tablero principal con KPIs y resumen de proyectos.
@@ -20,12 +24,20 @@ export const Dashboard: React.FC = () => {
   const [selected, setSelected] = React.useState<ProjectSP | null>(null);
   const [add, setAdd] = React.useState<boolean>(false);
   const [edit, setEdit] = React.useState<boolean>(false);
-  const {proyectos, tasks} = useGraphServices()
-  const {rows: projects, loadAll, archiveProject} = useProjects(proyectos)
-  const {loadTasksOnGoing, onGoingTasks} = useTasks(tasks)
+  const repositories = useRepositories();
+  const {rows: projects, loadAll, archiveProject} = useProjects();
+  const {loadTasksOnGoing, onGoingTasks} = useTasks(repositories.projectTasks!);
 
-  const activeProjects = projects.filter(p => p.Estado.toLocaleLowerCase().trim() === "en curso");
-  const closedProjects = projects.filter(p => p.Estado.toLocaleLowerCase().trim() === "cerrado" || p.Estado.toLocaleLowerCase().trim() === "cancelado");
+
+  const activeProjects = projects.filter(p => normalizeEstado(p.estado) === "en curso");
+  const closedProjects = projects.filter(p => normalizeEstado(p.estado ?? "")=== "cerrado" || normalizeEstado(p.estado) === "cancelado");
+
+  const taskIds = React.useMemo(
+    () => onGoingTasks.map((task) => String(task.id ?? "").trim()).filter(Boolean),
+    [onGoingTasks]
+  );
+
+  const { responsablesByTaskId } = useTaskResponsables(taskIds);
 
   
 
@@ -58,22 +70,22 @@ export const Dashboard: React.FC = () => {
     return `${percent}%`;
   }
 
-  const activeProjectIds = React.useMemo(() => activeProjects.map(p => p.Id).join("|"), [activeProjects]);
+  const activeProjectIds = React.useMemo(() => activeProjects.map(p => p.id).join("|"), [activeProjects]);
 
   const unassignedByProject = React.useMemo(() => {
     const map: Record<string, number> = {};
 
     onGoingTasks.forEach((t) => {
-      const projectId = t.IdProyecto ?? "";
-      //const isUnassigned = !t.CorreoResponsable;
-      const isUnassigned = true
+      const projectId = String(t.id_proyecto ?? "").trim();
+      const taskId = String(t.id ?? "").trim();
+      if (!projectId || !taskId) return;
 
-      if (!projectId) return;
+      const isUnassigned = !(responsablesByTaskId[taskId]?.length);
       map[projectId] = (map[projectId] ?? 0) + (isUnassigned ? 1 : 0);
     });
 
     return map;
-  }, [onGoingTasks]);
+  }, [onGoingTasks, responsablesByTaskId]);
 
   React.useEffect(() => {
     if (activeProjects.length > 0) {
@@ -181,37 +193,37 @@ export const Dashboard: React.FC = () => {
 }
       <div className="dash__projects-grid">
         {activeProjects.map(p => (
-          <article key={p.Id} className="card card--accent">
+          <article key={p.id} className="card card--accent">
             {/* Menú contextual */
 }
             <div className="card__menu">
-              <button type="button" className="btn btn--ghost" style={{ padding: 4, borderRadius: 999 }} onClick={e => handleMenuClick(e, p.Id ?? "")}>
+              <button type="button" className="btn btn--ghost" style={{ padding: 4, borderRadius: 999 }} onClick={e => handleMenuClick(e, p.id ?? "")}>
                 <span>⋮</span>
               </button>
 
-              {openDropdownId === p.Id && (
+              {openDropdownId === p.id && (
                 <div className="card__menu-panel" onClick={e => e.stopPropagation()}>
                   <button type="button" className="card__menu-item" onClick={() => {setSelected(p ?? ""); setOpenDropdownId(null); setEdit(true)}}>
                     Renombrar proyecto
                   </button>
-                  <button type="button" className="card__menu-item" onClick={(e) => {handleArchive(e, p.Id ?? "") }}>
+                  <button type="button" className="card__menu-item" onClick={(e) => {handleArchive(e, p.id ?? "") }}>
                     Archivar / Cerrar
                   </button>
                 </div>
               )}
             </div>
 
-            <Link to={`/kanban/${p.Id}`} style={{ all: "unset", display: "block", cursor: "pointer" }}>
-                <h3 className="card__title">{p.Title}</h3>
-                <p className="card__meta">Líder: {p.Lider} | Entrega: {ParseDateShow(p.Fechadelanzamiento)}</p>
-                <p className="card__meta">Tareas sin asignar: {unassignedByProject[p.Id ?? ""] ?? 0}</p>
+            <Link to={`/kanban/${p.id}`} style={{ all: "unset", display: "block", cursor: "pointer" }}>
+                <h3 className="card__title">{p.nombre_proyecto}</h3>
+                <p className="card__meta">Líder: {p.lider}</p>
+                <p className="card__meta">Tareas sin asignar: {unassignedByProject[p.id ?? ""] ?? 0}</p>
 
                 <div className="card__progress-label">
                   <span>Progreso</span>
-                  <span>{p.Progreso}%</span>
+                  <span>{p.progreso}%</span>
                 </div>
                 <div className="card__progress-track">
-                  <div className="card__progress-bar" style={{ width: `${p.Progreso}%` }}/>
+                  <div className="card__progress-bar" style={{ width: `${p.progreso}%` }}/>
                 </div>
             </Link>
           </article>
@@ -238,18 +250,17 @@ export const Dashboard: React.FC = () => {
             </thead>
             <tbody>
               {projects.map(p => (
-                <tr key={p.Id}> 
-                  <td>{p.Title} ({p.Estado})</td>
-                  <td>{ParseDateShow(p.FechaInicio)}</td>
-                  <td>{ParseDateShow(p.Fechadelanzamiento)}</td>
+                <tr key={p.id}> 
+                  <td>{p.nombre_proyecto} ({p.estado})</td>
+                  <td>{ParseDateShow(p.fecha_inicio)}</td>
                   <td>
-                    <span className={Number(p.Progreso) === 100 ? "badge badge--ok" : "badge badge--info"}>
-                      {p.Progreso ?? "-"}%
+                    <span className={Number(p.progreso) === 100 ? "badge badge--ok" : "badge badge--info"}>
+                      {p.progreso ?? "-"}%
                     </span>
                   </td>
                   <td>
                     {
-                    <Link type="button" className="btn btn--ghost-primary btn--ghost" style={{ paddingInline: 10, paddingBlock: 4, fontSize: "0.75rem" }} to={`/metrics/${p.Id}`}>
+                    <Link type="button" className="btn btn--ghost-primary btn--ghost" style={{ paddingInline: 10, paddingBlock: 4, fontSize: "0.75rem" }} to={`/metrics/${p.id}`}>
                       Ver fugas
                     </Link>
                     }

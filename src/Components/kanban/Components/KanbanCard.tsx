@@ -2,6 +2,7 @@ import React from "react";
 import type { projectTasks, taskResponsible } from "../../../models/AperturaTienda";
 import { normalize } from "../../../utils/commons";
 import { ParseDateShow } from "../../../utils/Date";
+import { showWarning } from "../../../utils/toast";
 
 
 type Props = {
@@ -26,13 +27,13 @@ const KanbanCard: React.FC<Props> = ({task, tasks, onClick, respByTaskId, respon
   const byCodigo = React.useMemo(() => {
     const m = new Map<string, projectTasks>();
     for (const t of tasks ?? []) {
-      const c = normalize(t.Codigo);
+      const c = normalize(t.codigo);
       if (c) m.set(c, t);
     }
     return m;
   }, [tasks,]);
 
-  const getParentByDependency = React.useCallback((dep?: string | null) => {
+  const getParentByDependency = React.useCallback((dep?: number | null) => {
     const key = normalize(dep);
     if (!key) return null;
     return byCodigo.get(key) ?? null;
@@ -43,19 +44,19 @@ const KanbanCard: React.FC<Props> = ({task, tasks, onClick, respByTaskId, respon
   /* ========= DRAG & DROP ========= */
 
   const handleDragStart = (ev: React.DragEvent<HTMLDivElement>, task: projectTasks) => {
-    if (task.Dependencia) {
-      const parent = getParentByDependency(task.Dependencia);
+    if (task.dependencia) {
+      const parent = getParentByDependency(task.dependencia);
       const blocked = !parent || !isCompleted(parent.Estado);
 
       if (blocked && task.Estado !== "Completada") {
         ev.preventDefault();
-        const msg = `Tarea BLOQUEADA: "${task.Title}" depende de que "${parent ? parent.Title : task.Dependencia}" esté en estado "Completada".`;
-        window.alert(msg);
+        const msg = `Tarea BLOQUEADA: "${task.nombre_tarea}" depende de que "${parent ? parent.nombre_tarea : task.dependencia}" esté en estado "Completada".`;
+        showWarning(msg, { autoClose: 8000 });
         return;
       }
     }
 
-    ev.dataTransfer.setData("text/plain", String(task.Id));
+    ev.dataTransfer.setData("text/plain", String(task.id));
     ev.currentTarget.classList.add("kb-task--dragging");
   };
 
@@ -73,7 +74,7 @@ const KanbanCard: React.FC<Props> = ({task, tasks, onClick, respByTaskId, respon
   };
 
   const getTaskResponsables = React.useCallback(
-    (t: projectTasks) => respByTaskId[String(t.Id ?? "")] ?? [],
+    (t: projectTasks) => respByTaskId[String(t.id ?? "")] ?? [],
     [respByTaskId]
   );
 
@@ -82,8 +83,8 @@ const KanbanCard: React.FC<Props> = ({task, tasks, onClick, respByTaskId, respon
       if (!resps.length) return "Sin asignar";
 
       const names = resps.map((r) => {
-        const mail = (r.Correo ?? "").trim().toLowerCase();
-        return responsablesMap?.[mail] ?? r.Title ?? mail;
+        const mail = (r.correo ?? "").trim().toLowerCase();
+        return responsablesMap?.[r.nombre] ?? r.nombre ?? mail;
       });
 
       if (names.length === 1) return names[0];
@@ -112,14 +113,14 @@ const KanbanCard: React.FC<Props> = ({task, tasks, onClick, respByTaskId, respon
     return { dotClass: "kb-due-dot--ok", label: "A tiempo" };
   }
 
-  const isCritical = task.TipoTarea === "Critica";
+  const isCritical = task.tipo_tarea === "Critica";
   const isDevuelta = task.Estado === "Devuelta";
   const isStarted = task.Estado === "Iniciado";
   const isOutOfTime = task.Estado === "Vencida";
   const isFinished = task.Estado === "Completada"
 
-  const parent = getParentByDependency(task.Dependencia);
-  const isBlocked = Boolean(task.Dependencia) && (task.Estado !== "Completada" && task.Estado !== "Iniciada") && (!parent || !isCompleted(parent.Estado));
+  const parent = getParentByDependency(task.dependencia);
+  const isBlocked = Boolean(task.dependencia) && (task.Estado !== "Completada" && task.Estado !== "Iniciada") && (!parent || !isCompleted(parent.Estado));
 
   let borderClass = "kb-task--normal";
   if (task.Estado === "Completada") borderClass = "kb-task--done";
@@ -130,11 +131,11 @@ const KanbanCard: React.FC<Props> = ({task, tasks, onClick, respByTaskId, respon
   const respLabel = getRespLabel(task);
 
   return (
-    <div key={task.Id} id={String(task.Id)} className={`kanban-task ${borderClass}`} onClick={() => onClick(task)} draggable onDragStart={(ev) => handleDragStart(ev, task)} onDragEnd={handleDragEnd} onDragOver={handleDragOver}>
+    <div key={task.id} id={String(task.id)} className={`kanban-task ${borderClass}`} onClick={() => onClick(task)} draggable onDragStart={(ev) => handleDragStart(ev, task)} onDragEnd={handleDragEnd} onDragOver={handleDragOver}>
       <div className="kb-task-header">
         <p className="kb-task-title">
-          <span className="kb-task-id">[{task.Codigo || task.Id}]</span>
-          {task.Title}
+          <span className="kb-task-id">[{task.codigo || task.id}]</span>
+          {task.nombre_tarea}
         </p>
       </div>
 

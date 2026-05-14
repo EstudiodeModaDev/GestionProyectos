@@ -1,0 +1,144 @@
+.dvm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.52);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1200;
+}
+
+.dvm-panel {
+  width: min(1100px, 100%);
+  height: min(88vh, 900px);
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dvm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dvm-title-wrap {
+  min-width: 0;
+}
+
+.dvm-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.dvm-subtitle {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.dvm-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dvm-btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+}
+
+.dvm-btn:hover {
+  transform: translateY(-1px);
+}
+
+.dvm-btn-primary {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.dvm-btn-secondary {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.dvm-body {
+  flex: 1;
+  min-height: 0;
+  background: #f8fafc;
+}
+
+.dvm-viewer {
+  width: 100%;
+  height: 100%;
+}
+
+.dvm-viewer #react-doc-viewer {
+  height: 100%;
+}
+
+.dvm-viewer .react-doc-viewer {
+  height: 100%;
+}
+
+.dvm-fallback {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  color: #334155;
+  gap: 12px;
+}
+
+.dvm-fallback-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dvm-fallback-text {
+  margin: 0;
+  max-width: 480px;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .dvm-overlay {
+    padding: 0;
+  }
+
+  .dvm-panel {
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .dvm-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dvm-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+}

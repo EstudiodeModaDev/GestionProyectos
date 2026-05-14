@@ -1,8 +1,9 @@
 import * as React from "react";
 import type { TemplateTasks, projectTasks } from "../../../models/AperturaTienda";
 import type { ProjectSP } from "../../../models/Projects";
-import type { TareasProyectosService } from "../../../services/ProjectTasks.service";
-import { toGraphDateTime } from "../../../utils/Date";
+import { useRepositories } from "../../../repositories/repositoriesContext";
+import { toSupabaseDate } from "../../../utils/Date";
+import { getProjectTaskProjectId, getProjectTaskTemplateId } from "../../../utils/projectTasks";
 import { useAuth } from "../../../auth/authProvider";
 import { useGraphServices } from "../../../graph/graphContext";
 import { useAsyncStatus } from "../../commons/useAsyncStatus";
@@ -19,6 +20,9 @@ import { useTaskFilters } from "./useTaskFilters";
 import { useTaskForm } from "./useTaskForm";
 import { useTaskProgress } from "./useTaskProgress";
 import { useTasksRepository } from "./useTasksRepository";
+import { showError, showSuccess, showWarning } from "../../../utils/toast";
+import type { ProjectTasksRepository } from "../../../repositories/ProjectTasksRepository/ProjectTasksRepository";
+import type { tareaInsumoProyecto } from "../../../models/Insumos";
 
 const TASK_CREATION_CONCURRENCY = 10;
 
@@ -27,9 +31,10 @@ const TASK_CREATION_CONCURRENCY = 10;
  * @param tasksSvc - Servicio de acceso a datos de tareas.
  * @returns Estado consolidado, acciones y utilidades del dominio de tareas.
  */
-export function useTasks(tasksSvc: TareasProyectosService) {
+export function useTasks(tasksSvc: ProjectTasksRepository) {
   const graph = useGraphServices();
   const auth = useAuth();
+  const repositories = useRepositories();
 
   const repo = useTasksRepository(tasksSvc);
   const listStatus = useAsyncStatus();
@@ -47,13 +52,25 @@ export function useTasks(tasksSvc: TareasProyectosService) {
   const assignments = useTaskAssignments(repo, responsablesTarea.repo);
   const progress = useTaskProgress(repo);
   const critical = useTaskCriticalPaths(repo, buildFilter);
-  const projectController = useProjects(graph.proyectos);
+  const projectController = useProjects();
   const notificationController = useNotifications();
   const flowRules = useReglasFlujo();
 
+  const applySearchFilter = React.useCallback(
+    (items: projectTasks[]) => {
+      const term = filters.search.trim().toLowerCase();
+      if (!term) return items;
+
+      return items.filter((item) =>
+        `${item.codigo ?? ""} ${item.nombre_tarea ?? ""}`.toLowerCase().includes(term)
+      );
+    },
+    [filters.search]
+  );
+
   /**
    * Carga las tareas abiertas de todos los proyectos en curso.
-   * @param onGoingProjects - Proyectos actualmente en ejecución.
+   * @param onGoingProjects - Proyectos actualmente en ejecucion.
    */
   const loadTasksOnGoing = React.useCallback(
     async (onGoingProjects: ProjectSP[]) => {
@@ -61,7 +78,7 @@ export function useTasks(tasksSvc: TareasProyectosService) {
       try {
         const acc: projectTasks[] = [];
         for (const project of onGoingProjects) {
-          const items = await repo.listByProject(project.Id ?? "", { top: 10000 });
+          const items = await repo.listByProject(project.id ?? "");
           acc.push(...items);
         }
         setOnGoingTasks(acc);
@@ -81,12 +98,13 @@ export function useTasks(tasksSvc: TareasProyectosService) {
    * @returns Tareas resultantes.
    */
   const loadProjectTasks = React.useCallback(
-    async (projectId: string): Promise<TemplateTasks[]> => {
+    async (projectId: string): Promise<projectTasks[]> => {
       listStatus.start();
       try {
-        const items = await repo.getAll(buildFilter(projectId));
-        setTasks(items);
-        return items;
+        const items = await repo.getAll({id_proyecto: Number(projectId)});
+        const filtered = applySearchFilter(items);
+        setTasks(filtered);
+        return filtered;
       } catch (e) {
         listStatus.fail(e, "Error cargando tareas");
         setTasks([]);
@@ -95,7 +113,7 @@ export function useTasks(tasksSvc: TareasProyectosService) {
         listStatus.stop();
       }
     },
-    [repo, buildFilter, listStatus]
+    [repo, buildFilter, applySearchFilter, listStatus]
   );
 
   /**
@@ -104,12 +122,13 @@ export function useTasks(tasksSvc: TareasProyectosService) {
    * @returns Todas las tareas del proyecto.
    */
   const loadAllProjectTasks = React.useCallback(
-    async (projectId: string): Promise<TemplateTasks[]> => {
+    async (projectId: string): Promise<projectTasks[]> => {
       listStatus.start();
       try {
-        const items = await repo.getAll({ filter: `fields/IdProyecto eq '${projectId}'` });
-        setTasks(items);
-        return items;
+        const items = await repo.getAll({ id_proyecto: Number(projectId) });
+        const filtered = applySearchFilter(items);
+        setTasks(filtered);
+        return filtered;
       } catch (e) {
         listStatus.fail(e, "Error cargando tareas");
         setTasks([]);
@@ -118,7 +137,7 @@ export function useTasks(tasksSvc: TareasProyectosService) {
         listStatus.stop();
       }
     },
-    [repo, listStatus]
+    [repo, applySearchFilter, listStatus]
   );
 
   /**
@@ -131,7 +150,17 @@ export function useTasks(tasksSvc: TareasProyectosService) {
     async (taskId: string, newPhase: string, projectId: string) => {
       listStatus.start();
       try {
-        await repo.update(taskId, { Phase: newPhase });
+        const current = tasks.find((item) => item.id === taskId);
+        const template = current?.templateTask;
+
+        if (!template?.id || !repositories.templateTask) {
+          throw new Error("No se encontro la tarea plantilla asociada.");
+        }
+
+        await repositories.templateTask.updateTask(template.id, {
+          ...template,
+          fase: newPhase,
+        });
         await loadProjectTasks(projectId);
       } catch (e) {
         listStatus.fail(e, "Error actualizando fase");
@@ -139,7 +168,7 @@ export function useTasks(tasksSvc: TareasProyectosService) {
         listStatus.stop();
       }
     },
-    [repo, loadProjectTasks, listStatus]
+    [tasks, repositories.templateTask, loadProjectTasks, listStatus]
   );
 
   /**
@@ -149,37 +178,52 @@ export function useTasks(tasksSvc: TareasProyectosService) {
    * @param fechaInicioProyecto - Fecha de inicio del proyecto.
    * @param marca - Marca asociada al proyecto.
    * @param zona - Zona asociada al proyecto.
-   * @returns Resultado de la creación y códigos de tareas creadas.
+   * @returns Resultado de la creacion y codigos de tareas creadas.
    */
-  const createAllFromTemplate = React.useCallback(async (templateArr: TemplateTasks[], projectId: string, fechaInicioProyecto: Date, marca: string, zona: string) => {
-      if (!templateArr?.length) return { ok: false, data: [] as string[] };
+  const createAllFromTemplate = React.useCallback(
+    async (
+      templateArr: TemplateTasks[],
+      projectId: string,
+      fechaInicioProyecto: Date,
+      marca: string,
+      zona: string
+    ) => {
+      if (!templateArr?.length) {
+        return {
+          ok: false,
+          data: [] as string[],
+          taskMap: {} as Record<string, string>,
+        };
+      }
 
       listStatus.start();
       const creadas: string[] = [];
+      const taskMap: Record<string, string> = {};
 
       try {
         const taskPayloads = templateArr.map((item) => {
-          const fechaSolucion = item.Codigo === "T1" ? item.diasHabiles ? calcularFechaTarea(item.Diaspararesolver, fechaInicioProyecto, holidays, item.diasHabiles): null : null;
+          const fechaSolucion =
+            item.codigo === "T1"
+              ? item.dias_habiles
+                ? calcularFechaTarea(item.dias_para_resolver, fechaInicioProyecto, holidays, item.dias_habiles)
+                : null
+              : null;
 
-          const fechaInicio = item.Codigo === "T1" ? new Date() : null;
-          const estado = item.Codigo === "T1" ? "Iniciada" : "Bloqueada";
+          const fechaInicio = item.codigo === "T1" ? new Date() : null;
+          const estado = item.codigo === "T1" ? "Iniciada" : "Bloqueada";
 
           const payload: projectTasks = {
-            Codigo: item.Codigo,
-            Dependencia: item.Dependencia,
-            Diaspararesolver: item.Diaspararesolver,
-            IdProyecto: projectId,
-            Phase: item.Phase,
-            TipoTarea: item.TipoTarea,
-            Title: item.Title,
-            FechaResolucion: toGraphDateTime(fechaSolucion)!,
-            Estado: estado,
-            FechaCierre: null,
-            diasHabiles: item.diasHabiles ?? false,
-            fechaInicio: toGraphDateTime(fechaInicio)!,
-            razonBloqueo: "",
-            AreaResponsable: item.AreaResponsable,
+            id_tarea_plantilla: String(item.id ?? ""),
+            id_proyecto: projectId,
+            estado,
+            fecha_cierre: null,
+            fecha_resolucion: fechaSolucion?  toSupabaseDate(fechaSolucion) : null,
+            razon_devolucion: "",
+            razon_bloqueo: "",
+            fecha_inicio: fechaInicio ? toSupabaseDate(fechaInicio) : null,
           };
+
+          console.log(payload)
 
           return { item, payload };
         });
@@ -197,7 +241,10 @@ export function useTasks(tasksSvc: TareasProyectosService) {
 
           for (const created of createdBatch) {
             createdTasks.push(created);
-            creadas.push(created.createdTask.Codigo);
+            if (created.createdTask.codigo) creadas.push(created.createdTask.codigo);
+            if (created.item.id && created.createdTask.id) {
+              taskMap[String(created.item.id)] = String(created.createdTask.id);
+            }
           }
         }
 
@@ -206,19 +253,23 @@ export function useTasks(tasksSvc: TareasProyectosService) {
           await Promise.all(
             batch.map(async ({ item, createdTask }) =>
               responsablesTarea.assignToTask({
-                taskId: createdTask.Id!,
-                codigoTarea: item.Codigo,
-                marca,
-                zona,
+                taskId: Number(createdTask.id ?? 0),
+                templateTaskId: Number(item.id ?? 0),
+                marca: Number(marca),
+                zona: Number(zona),
               })
             )
           );
         }
 
-        return { ok: true, data: creadas };
+        return { ok: true, data: creadas, taskMap };
       } catch (e) {
         listStatus.fail(e, "Error creando tareas");
-        return { ok: false, data: [] as string[] };
+        return {
+          ok: false,
+          data: [] as string[],
+          taskMap: {} as Record<string, string>,
+        };
       } finally {
         listStatus.stop();
       }
@@ -233,78 +284,82 @@ export function useTasks(tasksSvc: TareasProyectosService) {
   const handleCompleteTask = React.useCallback(
     async (task: projectTasks) => {
       const data = await progress.setComplete(task);
-      await createTaskLog(task.Id!, auth.account?.name!, graph, "Completar Tarea");
+      await createTaskLog(task.id!, auth.account?.name!, repositories.logTareas!, "Completar Tarea");
 
       if (data.ok) {
-        await projectController.updatePorcentaje(task.IdProyecto!, data.percent);
+        const projectId = getProjectTaskProjectId(task);
+        await projectController.updatePorcentaje(projectId, data.percent);
 
-        const reglas = await flowRules.getRulesByTask(task.Codigo);
+        const reglas = await flowRules.getRulesByTask(getProjectTaskTemplateId(task));
 
         if (reglas.length > 0) {
-          const relaciones = await graph.tareaInsumoProyecto.getAllPlain({
-            filter: `fields/Title eq '${task.Codigo}' and fields/ProyectoId eq '${task.IdProyecto}'`,
-            top: 500,
-          });
+          const relaciones = await repositories.proyectoTareaInsumo?.loadRelation({id_tarea: Number(task.id), proyecto_id: Number(projectId)});
 
-          const insumoIds = relaciones.map((r: any) => r.IdInsumoProyecto).filter(Boolean);
-          const insumosProyecto = insumoIds.length > 0 ? await graph.insumoProyecto.getByIds(insumoIds) : [];
+          if(!relaciones) return
+
+          const insumoIds = relaciones.map((r: tareaInsumoProyecto) => r.id_insumo_proyecto).filter(Boolean);
+          const insumosProyecto = insumoIds.length > 0 ? await repositories.projectInsumo?.listInsumos({ids: insumoIds}) : [];
+
+          if(!insumosProyecto) {
+            return
+          }
 
           for (const regla of reglas) {
             const insumoRespuesta = insumosProyecto.find(
-              (i: any) => String(i.IdInsumo) === String(regla.IdPlantillaInsumo)
+              (i: any) => String(i.id_insumo) === String(regla.id_plantilla_insumo)
             );
 
-            const respuesta = String(insumoRespuesta?.Texto ?? "").trim().toLowerCase();
-            const esperado = String(regla.ValorEsperado ?? "").trim().toLowerCase();
+            const respuesta = String(insumoRespuesta?.texto ?? "").trim().toLowerCase();
+            const esperado = String(regla.valor_esperado ?? "").trim().toLowerCase();
             const cumple = respuesta === esperado;
 
-            const codigoDestinoActivar = cumple ? regla.TareaSiCumple : regla.TareaSiNoCumple;
-            const codigoDestinoOmitir = cumple ? regla.TareaSiNoCumple : regla.TareaSiCumple;
+            const codigoDestinoActivar = cumple ? regla.tarea_si_cumple : regla.tarea_si_no_cumple;
+            const codigoDestinoOmitir = cumple ? regla.tarea_si_no_cumple : regla.tarea_si_cumple;
 
             if (codigoDestinoActivar) {
               const destinoActivar = await repo.getPredecessorByCodigo(
-                codigoDestinoActivar,
-                task.IdProyecto
+                Number(codigoDestinoActivar),
+                projectId
               );
-              if (destinoActivar?.Id) {
-                await repo.update(destinoActivar.Id, { Estado: "Pendiente" });
+              if (destinoActivar?.id) {
+                await repo.update(destinoActivar.id, { estado: "Pendiente" });
               }
             }
 
             if (codigoDestinoOmitir) {
               const destinoOmitir = await repo.getPredecessorByCodigo(
-                codigoDestinoOmitir,
-                task.IdProyecto
+                Number(codigoDestinoOmitir),
+                projectId
               );
-              if (destinoOmitir?.Id) {
-                await repo.update(destinoOmitir.Id, { Estado: "Omitida" });
+              if (destinoOmitir?.id) {
+                await repo.update(destinoOmitir.id, { estado: "Omitida" });
               }
             }
           }
         }
 
-        const successors = await repo.getSuccessorsByCodigo(task.Codigo!, task.IdProyecto);
+        const successors = await repo.getSuccessorsByCodigo(task.id_tarea_plantilla, projectId);
 
         for (const successor of successors) {
           const newDate = dates.calcularFechaTarea(
-            successor.Diaspararesolver,
+            successor.dias_para_resolver ?? 0,
             new Date(data.completationDate!),
             holidays,
-            successor.diasHabiles
+            successor.dias_habiles ?? false
           );
-          await progress.setCompletationDateTask(successor.Id!, newDate);
+          await progress.setCompletationDateTask(successor.id!, newDate);
         }
 
-        const freshTasks = await repo.getAll(buildFilter(task.IdProyecto!));
-        const freshUnlocked = freshTasks.filter((t) => successors.some((s) => s.Id === t.Id));
+        const freshTasks = await repo.getAll({id_proyecto: Number(projectId)});
+        const freshUnlocked = freshTasks.filter((t) => successors.some((s) => s.id === t.id));
 
         await notificationController.sendUnlockedTaskNotification({
-          predecessorTask: task,
+          predecessorTask: { Codigo: task.codigo, Title: task.nombre_tarea },
           unlockedTasks: freshUnlocked,
         });
       }
 
-      await loadProjectTasks(task.IdProyecto!);
+      await loadProjectTasks(getProjectTaskProjectId(task));
     },
     [
       progress,
@@ -324,13 +379,14 @@ export function useTasks(tasksSvc: TareasProyectosService) {
   /**
    * Devuelve una tarea a su predecesora y notifica a los responsables correspondientes.
    * @param task - Tarea actual.
-   * @param motivoDevolucion - Motivo de la devolución.
+   * @param motivoDevolucion - Motivo de la devolucion.
    */
   const returnTask = React.useCallback(
     async (task: projectTasks, motivoDevolucion: string) => {
       try {
-        const predesesor = await repo.getPredecessorByCodigo(task.Dependencia, task.IdProyecto);
-        if (predesesor && task.Id) {
+        const projectId = getProjectTaskProjectId(task);
+        const predesesor = await repo.getPredecessorByCodigo(task.dependencia ?? 0, projectId);
+        if (predesesor && task.id) {
           const data = await progress.setReturned(predesesor);
 
           await notificationController.sendReturnedTaskNotication(
@@ -338,21 +394,21 @@ export function useTasks(tasksSvc: TareasProyectosService) {
             predesesor,
             motivoDevolucion
           );
-          await repo.update(task.Id, { Estado: "Bloqueado", razonDevolucion: motivoDevolucion });
+          await repo.update(task.id, { estado: "Bloqueado", razon_devolucion: motivoDevolucion });
           await createTaskLog(
-            predesesor.Id!,
+            predesesor.id!,
             auth.account?.name!,
-            graph,
+            repositories.logTareas!,
             "Tarea devuelta por el siguiente motivo: " + motivoDevolucion
           );
-          await projectController.updatePorcentaje(task.IdProyecto, data.percent);
-          await loadProjectTasks(task.IdProyecto);
-          alert("Se ha devuelto la tarea con éxito");
+          await projectController.updatePorcentaje(projectId, data.percent);
+          await loadProjectTasks(projectId);
+          showSuccess("Se ha devuelto la tarea con exito");
         } else {
-          alert("Esta tarea no tiene un predecesor definido.");
+          showWarning("Esta tarea no tiene un predecesor definido.");
         }
       } catch (e) {
-        alert("Algo ha salido mal");
+        showError("Algo ha salido mal");
         console.error("Error devolviendo tarea ", e);
       }
     },
@@ -360,34 +416,34 @@ export function useTasks(tasksSvc: TareasProyectosService) {
   );
 
   /**
-   * Bloquea o desbloquea manualmente una tarea por decisión del usuario.
+   * Bloquea o desbloquea manualmente una tarea por decision del usuario.
    * @param task - Tarea a actualizar.
-   * @param razon - Justificación del bloqueo.
+   * @param razon - Justificacion del bloqueo.
    */
   const blockOrUnblockByUser = React.useCallback(
     async (task: projectTasks, razon: string) => {
       try {
-        if (task.Id) {
-          const Estado = task.Estado === "UserBlocked" ? "Iniciado" : "UserBlocked";
+        if (task.id) {
+          const estado = task.Estado === "UserBlocked" ? "Iniciado" : "UserBlocked";
           const message =
-            Estado === "UserBlocked"
-              ? "La tarea ha sido bloqueada correctamente. No recibirás notificaciones hasta que la desbloquees."
+            estado === "UserBlocked"
+              ? "La tarea ha sido bloqueada correctamente. No recibiras notificaciones hasta que la desbloquees."
               : "La tarea ha sido desbloqueada correctamente. Ya puedes continuar y finalizarla.";
 
           const log =
-            Estado === "Iniciado"
+            estado === "Iniciado"
               ? "tarea desbloqueada por el usuario"
               : "Tarea bloqueada por el usuario por el siguiente motivo: " + razon;
 
-          await repo.update(task.Id, { Estado, razonBloqueo: razon });
-          await createTaskLog(task.Id!, auth.account?.name!, graph, log);
-          await loadProjectTasks(task.IdProyecto);
-          alert(message);
+          await repo.update(task.id!, { estado, razon_bloqueo: razon });
+          await createTaskLog(task.id!, auth.account?.name!, repositories.logTareas!, log);
+          await loadProjectTasks(getProjectTaskProjectId(task));
+          showSuccess(message);
         } else {
-          alert("Algo ha salido mal, vuelva a intentarlo.");
+          showError("Algo ha salido mal, vuelva a intentarlo.");
         }
       } catch (e) {
-        alert("Algo ha salido mal");
+        showError("Algo ha salido mal");
         console.error("Error bloqueando/desbloqueando tarea ", e);
       }
     },

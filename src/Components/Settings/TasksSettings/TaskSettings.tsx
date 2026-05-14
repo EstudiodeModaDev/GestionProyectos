@@ -42,8 +42,6 @@ export const TareasPlantillaModal: React.FC<TareasPlantillaModalProps> = ({clean
 
     if (!open) return null;
 
-    
-
     /**
      * Abre el detalle en modo creacion de tarea.
      */
@@ -52,8 +50,6 @@ export const TareasPlantillaModal: React.FC<TareasPlantillaModalProps> = ({clean
         cleanState();
         setDetailOpen(true);
     };
-
-    
 
     /**
      * Abre el detalle cargando la tarea seleccionada.
@@ -76,7 +72,6 @@ export const TareasPlantillaModal: React.FC<TareasPlantillaModalProps> = ({clean
         setDetailOpen(false);
     };
 
-    
 
     /**
      * Guarda los cambios de una tarea existente y cierra el modal de detalle.
@@ -90,12 +85,10 @@ export const TareasPlantillaModal: React.FC<TareasPlantillaModalProps> = ({clean
 
     return (
         <>
-            {/* Backdrop principal */
-}
+            {/* Backdrop principal */}
             <div className="tp-modal-backdrop" onClick={onClose} />
 
-            {/* Panel principal */
-}
+            {/* Panel principal */}
                 <section className="tp-modal" role="dialog" aria-modal="true" aria-labelledby="tp-modal-title">
                     <div className="tp-modal__panel">
                         <header className="tp-modal__header">
@@ -111,37 +104,37 @@ export const TareasPlantillaModal: React.FC<TareasPlantillaModalProps> = ({clean
 
                         <div className="tp-modal__toolbar">
                             <span className="tp-modal__counter">
-                            {loading ? "Cargando tareas..." : `${tareas.length} tareas`}
-                        </span>
+                                {loading ? "Cargando tareas..." : `${tareas.length} tareas`}
+                            </span>
 
-                    <button type="button" className="tp-btn tp-btn--primary" onClick={handleNuevaTarea}>
-                        <span className="tp-btn__icon" aria-hidden="true">
-                            +
-                        </span>
-                        Nueva tarea
-                    </button>
-                </div>
-
-                <div className="tp-modal__body">
-                    {loading ? (
-                        <div className="tp-skeleton-list">
-                            <div className="tp-skeleton-row" />
-                            <div className="tp-skeleton-row" />
-                            <div className="tp-skeleton-row" />
+                            <button type="button" className="tp-btn tp-btn--primary" onClick={handleNuevaTarea}>
+                                <span className="tp-btn__icon" aria-hidden="true">
+                                    +
+                                </span>
+                                Nueva tarea
+                            </button>
                         </div>
-                    ) : tareas.length === 0 ? (
+
+                        <div className="tp-modal__body">
+                            {loading ? (
+                                <div className="tp-skeleton-list">
+                                <div className="tp-skeleton-row" />
+                                <div className="tp-skeleton-row" />
+                                <div className="tp-skeleton-row" />
+                        </div>
+                        ) : tareas.length === 0 ? (
                         <div className="tp-empty">
                             <p>No hay tareas configuradas en esta plantilla.</p>
                             <button type="button"className="tp-btn tp-btn--ghost" onClick={handleNuevaTarea}>Crear la primera tarea</button>
                         </div>
-                    ) : (
+                        ) : (
                         <ul className="tp-task-list">
                             {tareas.map((t) => {
-                                const id = t.Id;
-                                const title = t.Title ?? "Tarea sin título";
-                                const type = t.TipoTarea ?? "";
-                                const phase = t.Phase ?? "";
-                                const dias = t.Diaspararesolver ?? "";
+                                const id = t.id;
+                                const title = t.nombre_tarea ?? "Tarea sin título";
+                                const type = t.tipo_tarea ?? "";
+                                const phase = t.fase ?? "";
+                                const dias = t.dias_para_resolver ?? "";
 
                                 return (
                                     <li key={id}>

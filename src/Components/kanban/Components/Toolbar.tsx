@@ -33,7 +33,7 @@ const KanbanHeader: React.FC<Props> = ({project, filters, loading, respByTaskId,
     const set = new Set<string>();
     for (const taskId of Object.keys(respByTaskId)) {
       for (const r of respByTaskId[taskId] ?? []) {
-        const mail = (r.Correo ?? "").trim().toLowerCase();
+        const mail = (r.nombre ?? "").trim().toLowerCase();
         if (mail) set.add(mail);
       }
     }
@@ -45,19 +45,19 @@ const KanbanHeader: React.FC<Props> = ({project, filters, loading, respByTaskId,
       {/* HEADER PROYECTO */}
       <header className="kb-header">
         <div>
-          <h1 className="kb-project-title">{project.Title}</h1>
-          <p className="kb-project-id">ID proyecto: {project.Id}</p>
+          <h1 className="kb-project-title">{project.nombre_proyecto}</h1>
+          <p className="kb-project-id">ID proyecto: {project.id}</p>
         </div>
 
         <div className="kb-project-status">
           <div className="kb-pill">
-            <span>{project.Estado ?? "En curso"}</span>
+            <span>{project.estado ?? "En curso"}</span>
           </div>
           <div className="kb-pill">
-            <span>{project.Progreso ?? 0}%</span>
+            <span>{project.progreso ?? 0}%</span>
           </div>
           <div className="kb-pill">
-            <span>{ParseDateShow(project.FechaInicio) ?? ""}</span>
+            <span>{ParseDateShow(project.fecha_inicio) ?? ""}</span>
           </div>
         </div>
       </header>

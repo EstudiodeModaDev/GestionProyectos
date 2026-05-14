@@ -7,6 +7,7 @@ import { Sidebar } from "./Components/Sidebar/Sidebar";
 import { useLocation, useNavigate } from "react-router-dom";
 import AppRoutes from "./routes";
 import type { ProjectSP } from "./models/Projects";
+import { RepositoriesProvider } from "./repositories/repositoriesContext.tsx";
 
 /**
  * Vistas principales disponibles dentro de la aplicacion autenticada.
@@ -133,8 +134,11 @@ export default function App() {
   return (
     <AuthProvider>
       <GraphServicesGate>
+      <RepositoriesProvider>
         <Shell />
+      </RepositoriesProvider>
       </GraphServicesGate>
+      
     </AuthProvider>
   );
 }

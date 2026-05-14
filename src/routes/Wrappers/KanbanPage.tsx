@@ -1,9 +1,10 @@
 import * as React from "react";
 import { useParams, Navigate } from "react-router-dom";
-import { useGraphServices } from "../../graph/graphContext";
 import type { KanbanPhase } from "../../Components/kanban/Kanban";
 import type { ProjectSP } from "../../models/Projects";
 import KanbanApertura from "../../Components/kanban/Kanban";
+import { useRepositories } from "../../repositories/repositoriesContext";
+import { createVoidProject } from "../../Funcionalidades/commons/project";
 
 const fasesAperturaTienda: KanbanPhase[] = [
   { id: 1, name: "Planificación y concepto" },
@@ -25,7 +26,7 @@ type Props = {
  */
 export function KanbanPage({ setSelectedProject, project }: Props) {
   const { projectId } = useParams();
-  const { proyectos } = useGraphServices();
+  const repositories = useRepositories()
 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -40,7 +41,14 @@ export function KanbanPage({ setSelectedProject, project }: Props) {
       setError(null);
 
       try {
-        const found = await proyectos.get(projectId);
+        let found: ProjectSP | null = createVoidProject()
+        const candidates = await repositories.projects?.loadProjects({id: projectId});
+
+        if(candidates && candidates?.length > 0){
+          found = candidates[0]
+        }
+
+
         if (!cancelled) setSelectedProject(found);
       } catch (e: any) {
         if (!cancelled) setError(e?.message ?? "Error cargando proyecto");
@@ -52,7 +60,7 @@ export function KanbanPage({ setSelectedProject, project }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [projectId, proyectos]);
+  }, [projectId,]);
 
   if (!projectId) return <Navigate to="/dashboard" replace />;
   if (loading) return <p>Cargando proyecto...</p>;

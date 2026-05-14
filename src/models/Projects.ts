@@ -1,16 +1,14 @@
 export type ProjectSP = {
-    Id?: string;
-    Title: string;
-    Descripcion: string; 
-    Estado: string;
-    Progreso: string;
-    Lider: string;
-    Fechadelanzamiento: string;
-    FechaInicio: string
+    id?: string;
+    nombre_proyecto: string;
+    estado: string;
+    progreso: number;
+    lider: string;
+    fecha_inicio: string
     fulfillment: number;
-    CorreoLider: string,
-    Marca: string;
-    Zona: string;
+    correo_lider: string,
+    id_marca: string;
+    id_zona: string;
 }
 
 export interface Kpm {

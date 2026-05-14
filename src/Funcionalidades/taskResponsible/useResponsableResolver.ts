@@ -1,8 +1,8 @@
 import * as React from "react";
 import type { useResponsableRulesRepository } from "./useResponsableRulesRepository";
-import type { taskResponsible } from "../../models/AperturaTienda";
+import type { responsableReglaTareaDetalle } from "../../models/responsables";
 
-type ResponsibleCandidate = Omit<taskResponsible, "Id" | "IdTarea" | "reglaId">;
+type ResponsibleCandidate = Omit<responsableReglaTareaDetalle, "id" | "regla_id">;
 
 /**
  * Detecta si un nombre funciona como marcador para resolución por jefe de zona.
@@ -26,43 +26,44 @@ export function useResponsableResolver(rulesRepo: ReturnType<typeof useResponsab
    * @returns Responsables deduplicados que deben asignarse a la tarea.
    */
   const resolve = React.useCallback(
-    async (args: { codigoTarea: string; marca: string; zona: string }): Promise<ResponsibleCandidate[]> => {
-      const { codigoTarea, marca, zona } = args;
-      if (!codigoTarea || !marca) return [];
+    async (args: { tarea: number; marca: number; zona: number }): Promise<ResponsibleCandidate[]> => {
+      const { tarea, marca, zona } = args;
+      if (!tarea || !marca) return [];
 
-      const reglas = await rulesRepo.getReglas(marca, codigoTarea);
+      const reglas = await rulesRepo.getReglas(marca, tarea);
       console.log(reglas)
       if (!reglas?.length) return [];
 
-      const reglaEspecifica = reglas.find((r) => (r.Ciudad ?? "").trim() === (zona ?? "").trim());
-      const reglaDefault = reglas.find((r) => !r.Ciudad || (r.Ciudad ?? "").trim() === "");
+      const reglaEspecifica = reglas.find((r) => (Number(r.id_zona ?? 0) === (zona ?? 0)));
+      const reglaDefault = reglas.find((r) => !r.id_zona || (r.id_zona) === null);
       const regla = reglaEspecifica ?? reglaDefault;
-      if (!regla?.Id) return [];
 
-      const detalles = await rulesRepo.getDetalles(regla.Id);
+      if (!regla?.id) return [];
+
+      const detalles = await rulesRepo.getDetalles(regla.id);
       if (!detalles?.length) return [];
 
-      const tieneJefeZona = detalles.some((d) => isJefeZonaMarker(d.Nombre));
+      const tieneJefeZona = detalles.some((d) => isJefeZonaMarker(d.nombre));
 
       if (tieneJefeZona) {
-        const jefes = await rulesRepo.getJefeZona(marca, zona);
+        const jefes = await rulesRepo.getJefeZona(String(marca), String(zona));
 
         if (!Array.isArray(jefes) || jefes.length === 0) return [];
 
         return jefes
           .map((jefe) => ({
-            Title: jefe.JefeNombre ?? "Jefe de zona",
-            Correo: jefe.JefeCorreo ?? "",
+            nombre: jefe.jefe_nombre ?? "Jefe de zona",
+            correo: jefe.jefe_correo ?? "",
           }) as ResponsibleCandidate)
-          .filter((x) => x.Correo.trim() !== "");
+          .filter((x) => x.correo.trim() !== "");
       }
 
       const seen = new Set<string>();
       return detalles
-        .filter((d) => !isJefeZonaMarker(d.Nombre))
-        .map((d) => ({ Title: d.Nombre, Correo: d.Correo } as ResponsibleCandidate))
+        .filter((d) => !isJefeZonaMarker(d.nombre))
+        .map((d) => ({ nombre: d.nombre, correo: d.correo } as ResponsibleCandidate))
         .filter((x) => {
-          const k = (x.Correo ?? "").trim().toLowerCase();
+          const k = (x.correo ?? "").trim().toLowerCase();
           if (!k) return false;
           if (seen.has(k)) return false;
           seen.add(k);

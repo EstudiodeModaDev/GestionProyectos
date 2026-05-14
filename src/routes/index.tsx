@@ -6,6 +6,10 @@ import { PlantillasPanel } from "../Components/Settings/Settings";
 import type { ProjectSP } from "../models/Projects";
 import { GanttPage } from "./Wrappers/GanttPage";
 import { MetricsPage } from "./Wrappers/MetricsPage";
+import { MarcasSettingsWrapper } from "./Wrappers/MarcasSettingsWrapper";
+import { AreasSettingsWrapper } from "./Wrappers/AreasSettingsWrapper";
+import { ZonasSettingsPage } from "../Components/Settings/GeneralSettings/zonasSettingsPage";
+import { JefesZonaSettingsPage } from "../Components/Settings/GeneralSettings/jefesZonaSettingsPage";
 
 type Props = {
   setSelectedProject: (p: ProjectSP) => void;
@@ -25,6 +29,10 @@ export default function AppRoutes({ setSelectedProject, project }: Props) {
       <Route path="/gantt/:projectId" element={<GanttPage setSelectedProject={setSelectedProject} project={project} />}/>
       <Route path="/resource/:projectId" element={<ResourcesPage setSelectedProject={setSelectedProject} project={project} />}/>
       <Route path="/settings" element={<PlantillasPanel plantillas={[{id: "1", nombre: "Apertura de tiendas", codigo: "apertura", tareasListName: "Tareas Apertura Tienda"}]} />} />
+      <Route path="/settings/general/zonas" element={<ZonasSettingsPage />} />
+      <Route path="/settings/general/marcas" element={<MarcasSettingsWrapper />} />
+      <Route path="/settings/general/areas" element={<AreasSettingsWrapper />} />
+      <Route path="/settings/general/jefes-zona" element={<JefesZonaSettingsPage />} />
       <Route path="/metrics/:projectId" element={<MetricsPage setSelectedProject={setSelectedProject} project={project} />}/>
     </Routes>
   );

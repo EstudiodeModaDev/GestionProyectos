@@ -1,7 +1,7 @@
 export interface LogTarea{
-  Id?: string
-  Title: string //Accion realizada
-  RealizadoPor: string;
-  FechaAccion: string;
-  IdTarea: string;
+  id?: string;
+  id_tarea: string;
+  fecha_accion: string | null;
+  accion: string
+  realizado_por: string | null
 }

@@ -3,6 +3,7 @@ export type Archivo = {
   name: string;
   webUrl: string;
   isFolder: boolean;
+  mimeType?: string;
   size?: number;
   lastModified?: string;
   childCount?: number

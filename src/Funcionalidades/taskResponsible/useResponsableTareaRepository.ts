@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { taskResponsible } from "../../models/AperturaTienda";
 import { useGraphServices } from "../../graph/graphContext";
+import { useRepositories } from "../../repositories/repositoriesContext";
 
 /**
  * Repositorio de acceso a datos para responsables asignados a tareas.
@@ -8,15 +9,17 @@ import { useGraphServices } from "../../graph/graphContext";
  */
 export function useResponsableTareaRepository() {
   const graph = useGraphServices();
+  const repositories = useRepositories()
 
   /**
    * Obtiene los responsables asignados a una tarea.
    * @param taskId - Identificador de la tarea.
    * @returns Responsables asignados.
    */
-  const getByTaskId = React.useCallback(async (taskId: string) => {
+  const getByTaskId = React.useCallback(async (taskId: number) => {
     if (!taskId) return [];
-    return (await graph.responsableProyecto.getAll({ filter: `fields/IdTarea eq '${taskId}'` })).items;
+    const task = await repositories.projectTaskReponsible?.loadResponsible({ tarea_id: taskId})
+    return task
   }, [graph]);
 
   /**
@@ -25,15 +28,18 @@ export function useResponsableTareaRepository() {
    * @param rows - Responsables a crear.
    * @returns Responsables creados.
    */
-  const createMany = React.useCallback(async (taskId: string, rows: Omit<taskResponsible, "Id" | "IdTarea" | "reglaId">[]) => {
+  const createMany = React.useCallback(async (taskId: string, rows: Omit<taskResponsible, "id" | "tarea_id">[]) => {
       if (!taskId || !rows?.length) return [];
       const created: taskResponsible[] = [];
       for (const r of rows) {
-        const one = await graph.responsableProyecto.create({
-          IdTarea: taskId,
-          Title: r.Title,
-          Correo: r.Correo,
+        const one = await repositories.projectTaskReponsible?.createResponsible({
+          tarea_id: taskId,
+          correo: r.correo,
+          nombre: r.nombre,
         });
+
+        if(!one) continue
+
         created.push(one);
       }
       return created;
@@ -41,26 +47,5 @@ export function useResponsableTareaRepository() {
     [graph]
   );
 
-    /**
-     * Elimina un responsable por su identificador.
-     * @param id - Identificador del responsable.
-     */
-    const deleteById = React.useCallback(async (id: string) => {
-      if (!id) return;
-      await graph.responsableProyecto.delete(id);
-    }, [graph]);
-
-    /**
-     * Elimina todos los responsables asignados a una tarea.
-     * @param taskId - Identificador de la tarea.
-     */
-    const deleteAllByTaskId = React.useCallback(async (taskId: string) => {
-      if (!taskId) return;
-      const current = (await graph.responsableProyecto.getAll({ filter: `fields/IdTarea eq '${taskId}'` })).items;
-      for (const r of current) {
-        if (r.Id) await graph.responsableProyecto.delete(r.Id);
-      }
-    }, [graph]);
-
-  return { getByTaskId, createMany, deleteById, deleteAllByTaskId };
+  return { getByTaskId, createMany,};
 }

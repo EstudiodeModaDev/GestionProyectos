@@ -3,6 +3,10 @@ import type { TemplateTasks } from "../../../models/AperturaTienda";
 import type { responsableReglaTarea, responsableReglaTareaDetalle } from "../../../models/responsables";
 import "../Settings.css"
 import "./css.css"
+import { useMarcas } from "../../../Funcionalidades/generalConfigs/marcasConfig/useMarcas";
+import { useZonas } from "../../../Funcionalidades/generalConfigs/zonasConfig/useZonas";
+import { ConfirmActionModal } from "../../confirmationModal/ConfirmActionModal";
+import { showError, showSuccess, showWarning } from "../../../utils/toast";
 
 type Props = {
   open: boolean;
@@ -19,16 +23,15 @@ type Props = {
 };
 
 const reglaVacia: responsableReglaTarea = {
-  Title: "",
-  Ciudad: "",
-  Marca: "",
+  id_marca: null,
+  id_zona: null,
+  template_task_id: null,
 };
 
 const detalleVacio: responsableReglaTareaDetalle = {
-  Title: "",
-  Nombre: "",
-  Correo: "",
-  reglaId: 0,
+  regla_id: "",
+  correo: "",
+  nombre: "",
 };
 
 /**
@@ -43,16 +46,23 @@ export function DetailResponsableRegla({open, tareas, regla, detalles, onClose, 
 
   const [detalle, setDetalle] = React.useState<responsableReglaTareaDetalle>(detalleVacio);
   const [savingDetalle, setSavingDetalle] = React.useState(false);
+  const [detalleToDelete, setDetalleToDelete] = React.useState<string | null>(null);
+  const marcas = useMarcas()
+  const zonas = useZonas()
 
   React.useEffect(() => {
     if (!open) return;
+  
+    void marcas?.loadMarcasBD()
+    void zonas.loadZonas()
 
     if (regla) {
       setState({ ...regla});
     } else {setState({...reglaVacia,});}
 
-    setDetalle({...detalleVacio, reglaId: Number(regla?.Id) ?? 0,});
+    setDetalle({ ...detalleVacio, regla_id: String(regla?.id ?? "") });
   }, [open, regla]);
+
 
   if (!open) return null;
 
@@ -82,26 +92,26 @@ export function DetailResponsableRegla({open, tareas, regla, detalles, onClose, 
    * Valida y guarda la regla principal.
    */
   const handleSaveRegla = async () => {
-    if (!state.Title?.trim()) {
-      alert("Debes seleccionar una tarea.");
+    if (!state.template_task_id) {
+      showWarning("Debes seleccionar una tarea.");
       return;
     }
 
     setSaving(true);
     try {
-      const payload: responsableReglaTarea = {...state, Title: state.Title,};
+      const payload: responsableReglaTarea = {...state, template_task_id: state.template_task_id,};
 
-      if (regla?.Id) {
-        await onEditRegla(regla.Id, payload);
+      if (regla?.id) {
+        await onEditRegla(regla.id, payload);
       } else {
         await onCreateRegla(payload);
       }
 
-      alert("Regla guardada correctamente.");
+      showSuccess("Regla guardada correctamente.");
       onClose();
     } catch (e) {
       console.error(e);
-      alert("No fue posible guardar la regla.");
+      showError("No fue posible guardar la regla.");
     } finally {
       setSaving(false);
     }
@@ -113,24 +123,24 @@ export function DetailResponsableRegla({open, tareas, regla, detalles, onClose, 
    * Agrega un nuevo encargado a la regla actualmente persistida.
    */
   const handleAddDetalle = async () => {
-    if (!regla?.Id) {
-      alert("Primero debes guardar la regla.");
+    if (!regla?.id) {
+      showWarning("Primero debes guardar la regla.");
       return;
     }
 
-    if (!detalle.Nombre?.trim() || !detalle.Correo?.trim()) {
-      alert("Debes ingresar nombre y correo.");
+    if (!detalle.nombre?.trim() || (!detalle.correo?.trim() && detalle.nombre.toLocaleLowerCase().trim() !== "jefe de zona")) {
+      showWarning("Debes ingresar nombre y correo.");
       return;
     }
 
     setSavingDetalle(true);
     try {
-      await onCreateDetalle(regla.Id, {...detalle, Title: regla.Title, reglaId: Number(regla.Id),});
+      await onCreateDetalle(regla.id, { ...detalle, regla_id: regla.id });
 
-      setDetalle({...detalleVacio, reglaId: Number(regla.Id),});
+      setDetalle({ ...detalleVacio, regla_id: regla.id });
     } catch (e) {
       console.error(e);
-      alert("No fue posible agregar el encargado.");
+      showError("No fue posible agregar el encargado.");
     } finally {
       setSavingDetalle(false);
     }
@@ -145,10 +155,7 @@ export function DetailResponsableRegla({open, tareas, regla, detalles, onClose, 
    */
   const handleDeleteDetalle = async (id?: string) => {
     if (!id) return;
-    const ok = window.confirm("¿Eliminar este encargado?");
-    if (!ok) return;
-
-    await onDeleteDetalle(id);
+    setDetalleToDelete(id);
   };
 
   return (
@@ -157,7 +164,7 @@ export function DetailResponsableRegla({open, tareas, regla, detalles, onClose, 
       <div className="tp-modal tp-modal--lg tp-modal--nested" role="dialog" aria-modal="true" aria-label="Detalle de regla de encargados">
         <div className="tp-modal__header">
           <div>
-            <h3 className="tp-modal__title">{regla ? "Editar regla de encargados" : "Nueva regla de encargados"}</h3>
+            <h3 className="tp-modal__title">{regla?.id ? "Editar regla de encargados" : "Configurar encargados de la tarea"}</h3>
             <p className="tp-modal__subtitle"> Configura la tarea y sus responsables. </p>
           </div>
 
@@ -175,11 +182,11 @@ export function DetailResponsableRegla({open, tareas, regla, detalles, onClose, 
             <div className="tp-grid tp-grid--2">
               <label className="tp-field">
                 <span className="tp-field__label">Tarea</span>
-                <select className="tp-field__input" value={state.Title ?? ""} onChange={(e) => handleSetField("Title", e.target.value)}>
+                <select className="tp-field__input" value={state.template_task_id ?? ""} onChange={(e) => handleSetField("template_task_id", Number(e.target.value))}>
                   <option value="">Selecciona una tarea</option>
                   {tareas.map((t) => (
-                    <option key={t.Id ?? t.Codigo} value={t.Codigo}>
-                      {t.Codigo} - {t.Title}
+                    <option key={t.id ?? t.codigo} value={t.id}>
+                      {t.codigo} - {t.nombre_tarea}
                     </option>
                   ))}
                 </select>
@@ -187,17 +194,26 @@ export function DetailResponsableRegla({open, tareas, regla, detalles, onClose, 
 
               <label className="tp-field">
                 <span className="tp-field__label">Marca</span>
-                <input className="tp-field__input" value={state.Marca ?? ""} onChange={(e) => handleSetField("Marca", e.target.value)} placeholder="Marca"/>
+                <select className="tp-field__input" value={state.id_marca ?? ""} onChange={(e) => handleSetField("id_marca", Number(e.target.value))}>
+                  <option value="">Selecciona una marca</option>
+                  {marcas.marcas.map((t) => (
+                    <option key={t.id ?? t.nombre_marca} value={t.id}>
+                      {t.nombre_marca}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className="tp-field">
                 <span className="tp-field__label">Zona</span>
-                <input className="tp-field__input" value={state.Ciudad ?? ""} onChange={(e) => handleSetField("Ciudad", e.target.value)} placeholder="Zona"/>
-              </label>
-
-              <label className="tp-field">
-                <span className="tp-field__label">Ciudad</span>
-                <input className="tp-field__input" value={state.Ciudad ?? ""} onChange={(e) => handleSetField("Ciudad", e.target.value)} placeholder="Ciudad"/>
+                <select className="tp-field__input" value={state.id_zona ?? ""} onChange={(e) => handleSetField("id_zona", Number(e.target.value))}>
+                  <option value="">Selecciona una zona</option>
+                  {zonas.zones.map((t) => (
+                    <option key={t.id ?? t.zonas} value={t.id}>
+                      {t.zonas}
+                    </option>
+                  ))}
+                </select>
               </label>
             </div>
 
@@ -211,7 +227,7 @@ export function DetailResponsableRegla({open, tareas, regla, detalles, onClose, 
           <section className="tp-section">
             <h4 className="tp-section__title">Encargados</h4>
 
-            {!regla?.Id ? (
+            {!regla?.id ? (
               <div className="tp-empty">
                 Guarda primero la regla para poder agregar encargados.
               </div>
@@ -237,11 +253,11 @@ export function DetailResponsableRegla({open, tareas, regla, detalles, onClose, 
                         </tr>
                       ) : (
                         detalles.map((d) => (
-                          <tr key={d.Id}>
-                            <td>{d.Nombre}</td>
-                            <td>{d.Correo}</td>
+                          <tr key={d.id}>
+                            <td>{d.nombre}</td>
+                            <td>{d.correo}</td>
                             <td>
-                              <button className="pl-btn pl-btn--danger" onClick={() => handleDeleteDetalle(d.Id)}>
+                              <button className="pl-btn pl-btn--danger" onClick={() => handleDeleteDetalle(d.id)}>
                                 Eliminar
                               </button>
                             </td>
@@ -255,12 +271,12 @@ export function DetailResponsableRegla({open, tareas, regla, detalles, onClose, 
                 <div className="tp-grid tp-grid--2 tp-grid--detalle">
                   <label className="tp-field">
                     <span className="tp-field__label">Nombre</span>
-                    <input className="tp-field__input" value={detalle.Nombre ?? ""} onChange={(e) => handleSetDetalleField("Nombre", e.target.value)} placeholder="Nombre del encargado"/>
+                    <input className="tp-field__input" value={detalle.nombre ?? ""} onChange={(e) => handleSetDetalleField("nombre", e.target.value)} placeholder="Nombre del encargado"/>
                   </label>
 
                   <label className="tp-field">
                     <span className="tp-field__label">Correo</span>
-                    <input className="tp-field__input" value={detalle.Correo ?? ""}  onChange={(e) => handleSetDetalleField("Correo", e.target.value)} placeholder="correo@empresa.com"/>
+                    <input className="tp-field__input" value={detalle.correo ?? ""}  onChange={(e) => handleSetDetalleField("correo", e.target.value)} placeholder="correo@empresa.com"/>
                   </label>
                 </div>
 
@@ -274,6 +290,17 @@ export function DetailResponsableRegla({open, tareas, regla, detalles, onClose, 
           </section>
         </div>
       </div>
+
+      <ConfirmActionModal
+        open={Boolean(detalleToDelete)}
+        text="¿Eliminar este encargado?"
+        onCancel={() => setDetalleToDelete(null)}
+        onConfirm={async () => {
+          if (!detalleToDelete) return;
+          await onDeleteDetalle(detalleToDelete);
+          setDetalleToDelete(null);
+        }}
+      />
     </>
   );
 

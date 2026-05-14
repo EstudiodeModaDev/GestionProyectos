@@ -1,13 +1,13 @@
 import * as React from "react";
 import type { ProjectSP } from "../../../models/Projects";
-import type { ProyectosServices } from "../../../services/Projets.service";
+import type { ProjectRepository } from "../../../repositories/ProjectRepository/ProjectRepository";
 
 /**
  * Centraliza las acciones de escritura sobre proyectos.
  * @param proyectosSvc - Servicio de acceso a datos de proyectos.
  * @returns Estado de guardado y operaciones de creación/actualización.
  */
-export function useProjectActions(proyectosSvc: ProyectosServices) {
+export function useProjectActions(proyectosSvc: ProjectRepository) {
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -21,7 +21,7 @@ export function useProjectActions(proyectosSvc: ProyectosServices) {
       setSaving(true);
       setError(null);
       try {
-        return await proyectosSvc.create(payload);
+        return await proyectosSvc.createProject(payload);
       } catch (e: any) {
         setError(e?.message ?? "Error creando proyecto");
         throw e;
@@ -43,7 +43,7 @@ export function useProjectActions(proyectosSvc: ProyectosServices) {
       setSaving(true);
       setError(null);
       try {
-        return await proyectosSvc.update(id, { Title: newTitle });
+        return await proyectosSvc.updateProject(id, { nombre_proyecto: newTitle });
       } catch (e: any) {
         setError(e?.message ?? "Error actualizando nombre");
         throw e;
@@ -64,7 +64,7 @@ export function useProjectActions(proyectosSvc: ProyectosServices) {
       setSaving(true);
       setError(null);
       try {
-        return await proyectosSvc.update(id, { Estado: "Cancelado" });
+        return await proyectosSvc.updateProject(id, { estado: "Cancelado" });
       } catch (e: any) {
         setError(e?.message ?? "Error archivando proyecto");
         throw e;
@@ -85,9 +85,9 @@ export function useProjectActions(proyectosSvc: ProyectosServices) {
       setSaving(true);
       setError(null);
       try {
-        await proyectosSvc.update(id, { Progreso: porcentaje.toString() });
+        await proyectosSvc.updateProject(id, { progreso: porcentaje });
         if (porcentaje === 100) {
-          await proyectosSvc.update(id, { Estado: "Completado" });
+          await proyectosSvc.updateProject(id, { estado: "Completado" });
         }
       } catch (e: any) {
         setError(e?.message ?? "Error actualizando progreso");

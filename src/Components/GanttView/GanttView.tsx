@@ -1,9 +1,9 @@
 import * as React from "react";
 import "./GanttView.css";
-import { useGraphServices } from "../../graph/graphContext";
 import type { ProjectSP } from "../../models/Projects";
 import type { projectTasks, } from "../../models/AperturaTienda";
 import { useTasks } from "../../Funcionalidades/ProjectTasksHooks/useProjectTasks";
+import { useRepositories } from "../../repositories/repositoriesContext";
 
 type GanttViewProps = {
   project: ProjectSP;
@@ -13,7 +13,7 @@ type GanttRowVM = {
   id: string;
   baseId: string;
   name: string;
-  dependencyBaseId?: string;
+  dependencyBaseId?: number;
   isCritical: boolean;
   offsetPercent: number;
   barPercent: number;
@@ -28,17 +28,17 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
  * @returns Vista tipo Gantt construida a partir de las tareas del proyecto.
  */
 export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
-  const { tasks: tasksSvc } = useGraphServices();
-  const {loadProjectTasks, tasks: ProjecTasks, critical, loading,} = useTasks(tasksSvc);
+  const repositories = useRepositories()
+  const {loadProjectTasks, tasks: ProjecTasks, critical, loading,} = useTasks(repositories.projectTasks!);
   const [criticalPathIds, setCriticalPathsId] = React.useState<string[]>([]);
 
   //Fecha inicial del proyecto o por defecto fecha actual
   const baseDate = React.useMemo(
     () =>
-      project.FechaInicio
-        ? new Date(project.FechaInicio)
+      project.fecha_inicio
+        ? new Date(project.fecha_inicio)
         : new Date(),
-    [project.FechaInicio]
+    [project.fecha_inicio]
   );
 
   // Cargar tareas del proyecto activo + ruta crítica
@@ -47,8 +47,8 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
 
     (async () => {
       try {
-        await loadProjectTasks(project.Id!);
-        const criticals = await critical.getCriticalCodes(project.Id!);
+        await loadProjectTasks(project.id!);
+        const criticals = await critical.getCriticalCodes(project.id!);
         if (!cancel) {
           setCriticalPathsId(criticals);
         }
@@ -60,16 +60,16 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
     return () => {
       cancel = true;
     };
-  }, [project.Id]);
+  }, [project.id]);
 
   const { totalDays, rows } = React.useMemo(() => {
     if (!ProjecTasks.length) {
       return { totalDays: 0, rows: [] as GanttRowVM[] };
     }
 
-    const tasksByCodigo = new Map<string, projectTasks>();
+    const taskById = new Map<string, projectTasks>();
     ProjecTasks.forEach((t) => {
-      if (t.Codigo) tasksByCodigo.set(t.Codigo, t);
+      if (t.id) taskById.set(t.id, t);
     });
 
     const startDates = new Map<string, Date>();
@@ -81,7 +81,7 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
      * @param t - Tarea a identificar.
      * @returns Codigo o identificador utilizable como clave interna.
      */
-    const getKey = (t: projectTasks) => t.Codigo || t.Id || "";
+    const getKey = (t: projectTasks) => t.codigo || t.id || "";
 
     
 
@@ -100,19 +100,19 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
 
       let start = new Date(baseDate);
 
-      if (t.Dependencia) {
-        const depCodigo = t.Dependencia; // ej: "T1"
+      if (t.dependencia) {
+        const depCodigo = t.dependencia; // ej: "T1"
         const parent =
-          tasksByCodigo.get(depCodigo) ||
+          taskById.get(String(depCodigo)) ||
           ProjecTasks.find(
-            (x) => x.Codigo === depCodigo || x.Id === depCodigo
+            (x) => Number(x.id) === Number(depCodigo)
           );
 
         if (parent) {
           const parentStart = computeStart(parent);
           start = new Date(
             parentStart.getTime() +
-              Number(parent.Diaspararesolver || 1) * MS_PER_DAY
+              Number(parent.dias_para_resolver || 1) * MS_PER_DAY
           );
         }
       }
@@ -132,7 +132,7 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
 
       const s = startDates.get(key) ?? baseDate;
       const end = new Date(
-        s.getTime() + Number(t.Diaspararesolver || 1) * MS_PER_DAY
+        s.getTime() + Number(t.dias_para_resolver || 1) * MS_PER_DAY
       );
       if (end > maxEnd) maxEnd = end;
     }
@@ -149,7 +149,7 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
       const key = getKey(t);
       const start = startDates.get(key) ?? baseDate;
 
-      const baseId = (t.Codigo || key).split("-").pop() || (t.Codigo || key);
+      const baseId = (t.codigo || key).split("-").pop() || (t.codigo || key);
       const isCritical = criticalPathIds.includes(baseId);
 
       let offsetDays = Math.round(
@@ -160,15 +160,15 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
       const offsetPercent = offsetDays * dayWidth;
       const barPercent = Math.max(
         1,
-        Number(t.Diaspararesolver || 1) * dayWidth
+        Number(t.dias_para_resolver || 1) * dayWidth
       );
 
       return {
-        id: t.Id ?? key,
+        id: t.id ?? key,
         baseId,
-        name: t.Title,
-        dependencyBaseId: t.Dependencia
-          ? t.Dependencia.split("-").pop() || t.Dependencia
+        name: t.nombre_tarea ?? "Sin tarea",
+        dependencyBaseId: t.dependencia
+          ? t.dependencia
           : undefined,
         isCritical,
         offsetPercent,
@@ -192,7 +192,7 @@ export const GanttView: React.FC<GanttViewProps> = ({ project }) => {
     <section className="gantt-root">
       <h1 className="gantt-titulo">Cronograma y Ruta Crítica</h1>
       <p className="gantt-subtitulo">
-        Visualización secuencial de tareas y dependencias para el proyecto: {project.Title}.
+        Visualización secuencial de tareas y dependencias para el proyecto: {project.nombre_proyecto}.
       </p>
 
       {/* Leyenda */

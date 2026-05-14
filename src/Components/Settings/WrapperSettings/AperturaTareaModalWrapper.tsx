@@ -1,16 +1,15 @@
 import * as React from "react";
-import { useGraphServices } from "../../../graph/graphContext";
 import { TareasPlantillaModal } from "../TasksSettings/TaskSettings";
 import type { Plantilla } from "../Settings";
 import { InsumosPlantillaModal } from "../InsumosSettigns/InsumosSettigns";
-import { usePlantillaInsumos, useTareaPlantillaInsumo } from "../../../Funcionalidades/Insumos";
+import { usePlantillaInsumos, useTareaPlantillaInsumo } from "../../../Funcionalidades/insumos";
 import { useTemplateTaks } from "../../../Funcionalidades/TemplateTasks/useTemplateTasks";
 import { useResponsableReglaTareaDetalleSettings } from "../../../Funcionalidades/taskResponsible/useResponsableReglaTareaDetalleSettings";
 import { useResponsableReglaTareaSettings } from "../../../Funcionalidades/taskResponsible/useResponsableReglaTareaSettings";
-import { ResponsablesReglaModal } from "../ResponsableSettings/ResponsableReglaModal";
 import { useFlowRulesSettings } from "../../../Funcionalidades/Reglas/useFlowRulesSettings";
 import { FlowRulesModal } from "../FlowRulesSettings/FlowRulesModal";
-import type { plantillaInsumos } from "../../../models/Insumos";
+import { useRepositories } from "../../../repositories/repositoriesContext";
+import { ResponsablesReglaModal } from "../ResponsableSettings/ResponsableReglaModal";
 
 type Props = {
   plantilla: Plantilla;
@@ -28,16 +27,15 @@ type Props = {
  * @returns Conjunto de modales especializados para la plantilla de apertura.
  */
 export const AperturaTareaModalWrapper: React.FC<Props> = ({openFlowRules, plantilla, openTasks, openInsumos, onClose, openResponsables}) => {
-  const graph = useGraphServices();
-  const templateTaks = useTemplateTaks(graph.templateTask)
-  const { loadInsumosPlantilla, state: statePlantillaInsumos, setField: setFieldPlantillaInsumos, loading: loadingInsumos, handleSubmit: createPlantillaInsumo, handleEdit: editarInsumo, deleteInsumo} = usePlantillaInsumos(graph.plantillaInsumos)
-  const { insumos: plantillaTareaInsumos, loadTareaInsumosPlantilla, deleteLink, createLink } = useTareaPlantillaInsumo(graph.plantillaTareaInsumo)
-  const loading = templateTaks.loading || loadingInsumos
   const detallesResponsable = useResponsableReglaTareaDetalleSettings()
   const reglasResponsable = useResponsableReglaTareaSettings()
   const flowRules = useFlowRulesSettings()
+  const repositories = useRepositories()
 
-  const [insumos, setInsumos] = React.useState<plantillaInsumos[] >([])
+  const templateInsumos = usePlantillaInsumos(repositories.plantillaInsumos!)  
+  const templateTaks = useTemplateTaks(repositories.templateTask!)
+  const { insumos: plantillaTareaInsumos, loadTareaInsumosPlantilla, deleteLink, handleSubmit } = useTareaPlantillaInsumo()
+  const loading = templateTaks.loading || templateInsumos.loading
 
   React.useEffect(() => {
     
@@ -51,30 +49,26 @@ export const AperturaTareaModalWrapper: React.FC<Props> = ({openFlowRules, plant
       }
 
     if (openInsumos || openTasks) {
-      const insumos = await loadInsumosPlantilla("Apertura tienda");
-      console.log("INSUMOS REALES:", insumos);
+      await templateInsumos.loadInsumosPlantilla("Apertura tienda");
 
-      setInsumos(insumos);
-
-      await loadTareaInsumosPlantilla("Apertura tienda");
+      const prueba = await loadTareaInsumosPlantilla("Apertura tienda");
+      console.log(prueba)
     }
 
 
       if (openResponsables) {
         await templateTaks.loadTemplateTasks();
-        await reglasResponsable.loadReglas();
-        await detallesResponsable.loadDetalles();
       }
 
       if (openFlowRules) {
         await templateTaks.loadTemplateTasks();
-        await loadInsumosPlantilla("Apertura tienda");
-        await flowRules.loadRules();
+        await templateInsumos.loadInsumosPlantilla("Apertura tienda");
+        await flowRules.loadRules(); 
       }
     };
 
     void load();
-  }, [openTasks, openInsumos, openResponsables, openFlowRules]);
+  }, [openTasks, openInsumos, openResponsables, openFlowRules,]);
 
   return (
     <>
@@ -89,9 +83,9 @@ export const AperturaTareaModalWrapper: React.FC<Props> = ({openFlowRules, plant
         setField={templateTaks.setField} 
         onEditTask={templateTaks.editTemplateTask} 
         onEliminarTarea={templateTaks.deleteTemplateTask} 
-        insumos={insumos} 
+        insumos={templateInsumos.insumos} 
         links={plantillaTareaInsumos} 
-        onAddLink={createLink} 
+        onAddLink={handleSubmit} 
         onDeleteLink={deleteLink} 
         proceso={"Apertura tienda"} 
         setState={templateTaks.setState} 
@@ -100,14 +94,14 @@ export const AperturaTareaModalWrapper: React.FC<Props> = ({openFlowRules, plant
       <InsumosPlantillaModal 
         open={openInsumos} 
         plantilla={plantilla} 
-        insumos={insumos} 
+        insumos={templateInsumos.insumos} 
         loading={loading} 
         onClose={onClose} 
-        state={statePlantillaInsumos} 
-        setField={setFieldPlantillaInsumos} 
-        onCrearInsumo={createPlantillaInsumo} 
-        onEditarInsumo={editarInsumo} 
-        onEliminarInsumo={deleteInsumo} 
+        state={templateInsumos.state} 
+        setField={templateInsumos.setField} 
+        onCrearInsumo={templateInsumos.handleSubmit} 
+        onEditarInsumo={templateInsumos.handleEdit} 
+        onEliminarInsumo={templateInsumos.deleteInsumo} 
         accion={"Apertura tienda"}/>
 
       <ResponsablesReglaModal 
@@ -115,7 +109,12 @@ export const AperturaTareaModalWrapper: React.FC<Props> = ({openFlowRules, plant
         tareas={templateTaks.templateTasks} 
         reglas={reglasResponsable.reglas} 
         detalles={detallesResponsable.detalles} 
+        loading={templateTaks.loading}
+        loadingReglas={reglasResponsable.loading}
+        loadingDetalles={detallesResponsable.loading}
         onClose={onClose} 
+        onLoadReglas={reglasResponsable.loadReglas}
+        onLoadDetalles={detallesResponsable.loadDetalles}
         onCreateRegla={reglasResponsable.createRegla} 
         onEditRegla={reglasResponsable.editRegla} 
         onDeleteRegla={reglasResponsable.deleteRegla} 
@@ -126,7 +125,7 @@ export const AperturaTareaModalWrapper: React.FC<Props> = ({openFlowRules, plant
         open={openFlowRules}
         proceso={"Apertura tienda"}
         tareas={templateTaks.templateTasks}
-        insumos={insumos}
+        insumos={templateInsumos.insumos}
         reglas={flowRules.reglas}
         loading={flowRules.loading}
         onClose={onClose}

@@ -2,6 +2,7 @@ import type { GraphRest } from "../graph/graphRest";
 import type { GetAllOpts, PageResult } from "../models/commons";
 import {esc} from "../utils/commons"
 
+
 /**
  * Servicio base para operar listas de SharePoint mediante Microsoft Graph.
  * @typeParam TModel - Modelo expuesto por el servicio.

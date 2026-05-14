@@ -2,7 +2,8 @@ import * as React from "react";
 import "./TaskLog.css";
 import type { LogTarea } from "../../models/LogTarea";
 import { loadTaskLog } from "../../Funcionalidades/TaskLog/taskLogActions";
-import { useGraphServices } from "../../graph/graphContext";
+import { showError } from "../../utils/toast";
+import { useRepositories } from "../../repositories/repositoriesContext";
 
 type TaskLogModalProps = {
   open: boolean;
@@ -41,7 +42,7 @@ function formatDate(value?: string) {
 export function TaskLogModal({open, onClose, taskTitle, taskId}: TaskLogModalProps) {
   const [logs, setLogs] = React.useState<LogTarea[]>([])
   const [loading, setLoading] = React.useState<boolean>(false)
-  const graph = useGraphServices()
+  const repositories = useRepositories()
 
   
 
@@ -50,14 +51,14 @@ export function TaskLogModal({open, onClose, taskTitle, taskId}: TaskLogModalPro
    */
   const loadLogs = async () => {
     setLoading(true)
-    const loadedLogs = await loadTaskLog(taskId, graph)
+    const loadedLogs = await loadTaskLog(taskId, repositories.logTareas!)
     if(!loadedLogs.error){
       setLogs(loadedLogs.data)
       setLoading(false)
       return
     }
     setLoading(false)
-    alert("Algo ha salido mal cargando los logs " + loadedLogs.error)
+    showError("Algo ha salido mal cargando los logs " + loadedLogs.error)
   };
 
   React.useEffect(() => {
@@ -135,10 +136,10 @@ export function TaskLogModal({open, onClose, taskTitle, taskId}: TaskLogModalPro
                 </thead>
                 <tbody>
                   {logs.map((log, index) => (
-                    <tr key={log.Id ?? `${log.IdTarea}-${log.FechaAccion}-${index}`}>
-                      <td>{log.Title || "-"}</td>
-                      <td>{log.RealizadoPor || "-"}</td>
-                      <td>{formatDate(log.FechaAccion)}</td>
+                    <tr key={log.id ?? `${log.id_tarea}-${log.fecha_accion}-${index}`}>
+                      <td>{log.accion || "-"}</td>
+                      <td>{log.realizado_por || "-"}</td>
+                      <td>{formatDate(log.fecha_accion!)}</td>
                     </tr>
                   ))}
                 </tbody>

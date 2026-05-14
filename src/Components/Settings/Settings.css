@@ -1,243 +1,251 @@
-/* =========================================================
-   Panel de plantillas
-   ========================================================= */
-
 .plantillas-panel {
+  --settings-bg: #f7f8fb;
+  --settings-surface: #ffffff;
+  --settings-border: rgba(15, 23, 42, 0.08);
+  --settings-border-strong: rgba(15, 23, 42, 0.14);
+  --settings-ink: #0f172a;
+  --settings-muted: #5b6474;
+  --settings-accent: #1d4ed8;
+  --settings-accent-soft: rgba(29, 78, 216, 0.1);
+  --settings-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
-  padding: var(--space-6);
+  gap: 2rem;
   min-height: 100%;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--page-bg) 88%, white 12%) 0%,
-      var(--page-bg) 100%
-    );
-  font-family: var(--font-family);
+  padding: 2rem;
+  background: linear-gradient(180deg, #fbfcfe 0%, var(--settings-bg) 100%);
+  color: var(--settings-ink);
   box-sizing: border-box;
+}
+
+.plantillas-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.plantillas-header__eyebrow {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--settings-muted);
+}
+
+.plantillas-header__title {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  font-weight: 800;
+}
+
+.plantillas-header__text {
+  max-width: 44rem;
+  margin: 0;
+  color: var(--settings-muted);
+  line-height: 1.7;
+}
+
+.plantillas-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.plantillas-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .plantillas-title {
   margin: 0;
-  color: var(--ink);
-  font-size: clamp(var(--text-xl), 2vw, var(--text-3xl));
-  font-weight: 800;
+  font-size: 1.25rem;
   line-height: 1.1;
+  font-weight: 700;
   letter-spacing: -0.03em;
 }
 
-/* =========================================================
-   Grid de plantillas
-   ========================================================= */
-
 .plantillas-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--space-6);
-  align-items: stretch;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
 }
 
-/* =========================================================
-   Card
-   ========================================================= */
+.plantillas-list--general {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
 
 .plantilla-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: var(--space-6);
-  min-height: 220px;
-  padding: var(--space-6);
-  border-radius: calc(var(--card-radius) + 0.25rem);
-  border: 1px solid var(--border-subtle);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--surface) 94%, white 6%) 0%,
-      var(--surface) 100%
-    );
-  box-shadow: var(--card-shadow-soft);
-  overflow: hidden;
+  gap: 1.25rem;
+  min-height: 100%;
+  padding: 1.25rem;
+  border: 1px solid var(--settings-border);
+  border-radius: 1.25rem;
+  background: var(--settings-surface);
+  box-shadow: var(--settings-shadow);
   transition:
-    transform 180ms ease,
-    box-shadow 180ms ease,
-    border-color 180ms ease,
-    background-color 180ms ease;
-}
-
-.plantilla-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: 100%;
-  height: 4px;
-  background: linear-gradient(
-    90deg,
-    var(--primary) 0%,
-    color-mix(in srgb, var(--primary) 65%, white 35%) 100%
-  );
-  opacity: 0.95;
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .plantilla-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--primary-soft-border);
-  box-shadow: var(--card-shadow-strong);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--surface) 88%, var(--primary-soft) 12%) 0%,
-      var(--surface) 100%
-    );
+  transform: translateY(-2px);
+  border-color: var(--settings-border-strong);
 }
 
-/* =========================================================
-   Header card
-   ========================================================= */
+.plantilla-card--compact {
+  min-height: 220px;
+}
+
+.plantilla-card__topline {
+  width: 100%;
+  height: 0.2rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--settings-accent) 0%, #60a5fa 100%);
+}
 
 .plantilla-card__header {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  gap: var(--space-4);
+  align-items: flex-start;
+  gap: 1rem;
 }
 
 .plantilla-card__title {
   margin: 0;
-  color: var(--ink);
-  font-size: var(--text-lg);
-  font-weight: 800;
-  line-height: 1.3;
-  letter-spacing: -0.02em;
-  word-break: break-word;
+  font-size: 1.1rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
-/* =========================================================
-   Actions
-   ========================================================= */
+.plantilla-card__description {
+  margin: 0.45rem 0 0;
+  color: var(--settings-muted);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.plantilla-card__badge {
+  flex: 0 0 auto;
+  padding: 0.38rem 0.65rem;
+  border-radius: 999px;
+  background: var(--settings-accent-soft);
+  color: var(--settings-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.plantilla-card__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  padding: 0.95rem;
+  border-radius: 1rem;
+  background: #fafbfc;
+  border: 1px solid var(--settings-border);
+}
+
+.plantilla-card__meta > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.plantilla-card__meta-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--settings-muted);
+}
+
+.plantilla-card__meta strong {
+  font-size: 0.94rem;
+  line-height: 1.45;
+  font-weight: 600;
+}
 
 .plantilla-card__actions {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-3);
+  gap: 0.75rem;
 }
-
-/* =========================================================
-   Buttons
-   ========================================================= */
 
 .pl-btn {
   appearance: none;
-  border: 1px solid transparent;
-  border-radius: var(--btn-radius);
-  min-height: 2.75rem;
-  padding: 0.85rem 1rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
   width: 100%;
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: 700;
-  line-height: 1;
-  text-align: center;
+  min-height: 2.9rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 0.93rem;
+  font-weight: 600;
+  line-height: 1.2;
   cursor: pointer;
-  box-shadow: var(--btn-shadow);
   transition:
-    transform 160ms ease,
-    box-shadow 160ms ease,
     background-color 160ms ease,
     border-color 160ms ease,
-    color 160ms ease;
+    color 160ms ease,
+    transform 160ms ease;
 }
 
 .pl-btn:hover {
   transform: translateY(-1px);
-  box-shadow: var(--btn-shadow-strong);
-}
-
-.pl-btn:active {
-  transform: translateY(0);
 }
 
 .pl-btn:focus-visible {
   outline: none;
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent),
-    var(--btn-shadow-strong);
+  box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.12);
 }
 
 .pl-btn--primary {
-  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-hover) 100%);
-  color: var(--btn-ink, #fff);
-  border-color: color-mix(in srgb, var(--primary-hover) 70%, black 30%);
+  background: var(--settings-accent);
+  color: #ffffff;
 }
 
 .pl-btn--primary:hover {
-  background: linear-gradient(180deg, var(--primary-hover) 0%, var(--primary-hover) 100%);
+  background: #1e40af;
 }
 
 .pl-btn--ghost {
-  background: var(--surface);
-  color: var(--ink);
-  border-color: var(--border-subtle);
+  background: #ffffff;
+  color: var(--settings-ink);
+  border-color: var(--settings-border);
 }
 
 .pl-btn--ghost:hover {
-  background: var(--surface-subtle);
-  border-color: var(--border-strong);
+  border-color: var(--settings-border-strong);
+  background: #f8fafc;
 }
-
-/* =========================================================
-   Responsive
-   ========================================================= */
 
 @media (max-width: 900px) {
   .plantillas-panel {
-    padding: var(--space-5);
-    gap: var(--space-5);
-  }
-
-  .plantillas-list {
-    gap: var(--space-5);
-  }
-
-  .plantilla-card {
-    min-height: 200px;
-    padding: var(--space-5);
+    padding: 1.5rem;
   }
 }
 
 @media (max-width: 640px) {
   .plantillas-panel {
-    padding: var(--space-4);
-    gap: var(--space-4);
+    padding: 1rem;
+    gap: 1.5rem;
   }
 
-  .plantillas-title {
-    font-size: var(--text-xl);
-  }
-
-  .plantillas-list {
+  .plantillas-list,
+  .plantillas-list--general {
     grid-template-columns: 1fr;
-    gap: var(--space-4);
   }
 
-  .plantilla-card {
-    min-height: auto;
-    padding: var(--space-4);
-    gap: var(--space-4);
-  }
-
-  .plantilla-card__title {
-    font-size: var(--text-base);
-  }
-
-  .pl-btn {
-    min-height: 2.65rem;
-    padding: 0.8rem 0.95rem;
+  .plantilla-card__meta {
+    grid-template-columns: 1fr;
   }
 }

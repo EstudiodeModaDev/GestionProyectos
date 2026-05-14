@@ -1,13 +1,14 @@
 import * as React from "react";
 import type { ReglasFlujoTareas } from "../../models/Insumos";
-import { useGraphServices } from "../../graph/graphContext";
+import { useRepositories } from "../../repositories/repositoriesContext";
+import { showError } from "../../utils/toast";
 
 /**
  * Administra el mantenimiento de reglas de flujo de tareas.
  * @returns Estado, colección y operaciones CRUD de reglas.
  */
 export function useFlowRulesSettings() {
-  const graph = useGraphServices();
+  const repositories = useRepositories()
   const [reglas, setReglas] = React.useState<ReglasFlujoTareas[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<unknown>(null);
@@ -20,7 +21,7 @@ export function useFlowRulesSettings() {
     setLoading(true);
     setError(null);
     try {
-      const items = (await graph.reglasFlujo.getAll({ top: 5000 })).items;
+      const items = (await repositories.reglasFlujo?.loadAllRules()) ?? [];
       setReglas(items);
       return items;
     } catch (e) {
@@ -30,7 +31,7 @@ export function useFlowRulesSettings() {
     } finally {
       setLoading(false);
     }
-  }, [graph.reglasFlujo]);
+  }, [repositories.reglasFlujo]);
 
   /**
    * Crea una nueva regla de flujo.
@@ -41,7 +42,13 @@ export function useFlowRulesSettings() {
     setLoading(true);
     setError(null);
     try {
-      const created = await graph.reglasFlujo.create(payload);
+      const created = await repositories.reglasFlujo?.createRule(payload);
+
+      if(!created) {
+        showError("No se pudo crear la regla, por favor intente de nuevo");
+        throw new Error("No se pudo crear la regla");
+      }
+
       setReglas((prev) => [...prev, created]);
       return created;
     } catch (e) {
@@ -50,7 +57,7 @@ export function useFlowRulesSettings() {
     } finally {
       setLoading(false);
     }
-  }, [graph.reglasFlujo]);
+  }, [repositories.reglasFlujo]);
 
   /**
    * Actualiza una regla existente.
@@ -62,8 +69,17 @@ export function useFlowRulesSettings() {
     setLoading(true);
     setError(null);
     try {
-      const updated = await graph.reglasFlujo.update(id, payload);
-      setReglas((prev) => prev.map((r) => (String(r.Id) === String(id) ? updated : r)));
+      const updated = await repositories.reglasFlujo?.updateRule(id, payload) as ReglasFlujoTareas;
+      console.log(updated)
+
+      if(!updated) {
+        showError("No se pudo actualizar la regla, por favor intente de nuevo");
+        throw new Error("No se pudo actualizar la regla");
+      }
+
+      setReglas((prev) =>
+        prev.map((r) => (r.id === id ? updated : r))
+      );
       return updated;
     } catch (e) {
       setError(e);
@@ -71,7 +87,7 @@ export function useFlowRulesSettings() {
     } finally {
       setLoading(false);
     }
-  }, [graph.reglasFlujo]);
+  }, [repositories.reglasFlujo]);
 
   /**
    * Elimina una regla de flujo.
@@ -81,15 +97,15 @@ export function useFlowRulesSettings() {
     setLoading(true);
     setError(null);
     try {
-      await graph.reglasFlujo.delete(id);
-      setReglas((prev) => prev.filter((r) => String(r.Id) !== String(id)));
+      await repositories.reglasFlujo?.inactivateRule(id);
+      await loadRules()
     } catch (e) {
       setError(e);
       throw e;
     } finally {
       setLoading(false);
     }
-  }, [graph.reglasFlujo]);
+  }, [repositories.reglasFlujo]);
 
   return {
     reglas,

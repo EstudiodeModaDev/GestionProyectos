@@ -1,58 +1,102 @@
 import * as React from "react";
-import type { projectTasks } from "../../../models/AperturaTienda";
-import type { GetAllOpts } from "../../../models/commons";
-import type { TareasProyectosService } from "../../../services/ProjectTasks.service";
+import type { projectTasks, TemplateTasks } from "../../../models/AperturaTienda";
+import { useRepositories } from "../../../repositories/repositoriesContext";
+import {
+  getProjectTaskProjectId,
+  getProjectTaskTemplateId,
+  hydrateProjectTask,
+  hydrateProjectTasks,
+} from "../../../utils/projectTasks";
+import type { ProjectTasksFilters, ProjectTasksRepository } from "../../../repositories/ProjectTasksRepository/ProjectTasksRepository";
 
 /**
  * Repositorio de acceso a datos para tareas de proyecto.
- * @param tasksSvc - Servicio SharePoint de tareas.
+ * @param tasksSvc - Servicio de tareas.
  * @returns Operaciones de lectura y escritura de tareas.
  */
-export function useTasksRepository(tasksSvc: TareasProyectosService) {
+export function useTasksRepository(tasksSvc: ProjectTasksRepository) {
+  const repositories = useRepositories();
+
+  const loadTemplateMap = React.useCallback(async () => {
+    const templates = (await repositories.templateTask?.loadTasks()) ?? [];
+    return new Map<string, TemplateTasks>(
+      templates.map((template) => [String(template.id ?? ""), template])
+    );
+  }, [repositories.templateTask]);
+
   const getAll = React.useCallback(
-    async (opts: GetAllOpts) => {
-      return await tasksSvc.getAllPlain(opts);
+    async (opts: ProjectTasksFilters) => {
+      const [items, templateMap] = await Promise.all([tasksSvc.loadTasks(opts), loadTemplateMap()]);
+      return hydrateProjectTasks(items, templateMap);
     },
-    [tasksSvc]
+    [tasksSvc, loadTemplateMap]
   );
 
   const listByProject = React.useCallback(
-    (projectId: string, opts?: Partial<GetAllOpts>) =>
-      tasksSvc.getAllPlain({
-        top: 20000,
-        filter: `fields/IdProyecto eq '${projectId}'`,
-        ...(opts ?? {}),
-      }),
-    [tasksSvc]
+    async (projectId: string, opts?: ProjectTasksFilters) => {
+      const [items, templateMap] = await Promise.all([
+        tasksSvc.loadTasks({
+          id_proyecto: Number(projectId),
+          ...opts
+        }),
+        loadTemplateMap(),
+      ]);
+
+      return hydrateProjectTasks(items, templateMap);
+    },
+    [tasksSvc, loadTemplateMap]
   );
 
-  const create = React.useCallback((payload: projectTasks) => tasksSvc.create(payload), [tasksSvc]);
-  const update = React.useCallback((id: string, patch: Partial<projectTasks>) => tasksSvc.update(id, patch), [tasksSvc]);
-  const remove = React.useCallback((id: string) => tasksSvc.delete(id), [tasksSvc]);
+  const create = React.useCallback(
+    async (payload: projectTasks) => {
+      const created = await tasksSvc.createTasks(payload);
+      const templateMap = await loadTemplateMap();
+      return hydrateProjectTask(created, templateMap);
+    },
+    [tasksSvc, loadTemplateMap]
+  );
+
+  const update = React.useCallback(
+    async (id: string, patch: Partial<projectTasks>) => {
+      const updated = await tasksSvc.editTasks(id, patch);
+      const templateMap = await loadTemplateMap();
+      return hydrateProjectTask(updated, templateMap);
+    },
+    [tasksSvc, loadTemplateMap]
+  );
 
   const getPredecessorByCodigo = React.useCallback(
-    async (codigoDep: string, proyecto: string): Promise<projectTasks | null> => {
-      const items = await tasksSvc.getAllPlain({
-        filter: `fields/Codigo eq '${codigoDep}' and fields/IdProyecto eq '${proyecto}'`,
-        top: 1,
-      });
-      return items[0] ?? null;
+    async (codigoDep: number, proyecto: string): Promise<projectTasks | null> => {
+      if (!codigoDep || !proyecto) return null;
+
+      const items = await listByProject(proyecto);
+      return (
+        items.find(
+          (task) =>
+            getProjectTaskProjectId(task) === String(proyecto) &&
+            Number(getProjectTaskTemplateId(task)) === Number(codigoDep)
+        ) ?? null
+      );
     },
-    [tasksSvc]
+    [listByProject]
   );
 
   const getSuccessorsByCodigo = React.useCallback(
-    async (codigo: string, proyecto: string): Promise<projectTasks[]> => {
-      return tasksSvc.getAllPlain({
-        filter: `fields/Dependencia eq '${codigo}' and fields/IdProyecto eq '${proyecto}'`,
-        top: 20000,
-      });
+    async (codigo: string | number, proyecto: string): Promise<projectTasks[]> => {
+      if (!codigo || !proyecto) return [];
+
+      const items = await listByProject(proyecto);
+      return items.filter(
+        (task) =>
+          getProjectTaskProjectId(task) === String(proyecto) &&
+          Number(task.dependencia ?? 0) === Number(codigo)
+      );
     },
-    [tasksSvc]
+    [listByProject]
   );
 
   const countByFilter = React.useCallback(
-    async (filter: string) => (await tasksSvc.getAllPlain({ filter, top: 20000 })).length,
+    async (filter: ProjectTasksFilters) => (await tasksSvc.loadTasks(filter)).length,
     [tasksSvc]
   );
 
@@ -61,7 +105,6 @@ export function useTasksRepository(tasksSvc: TareasProyectosService) {
     listByProject,
     create,
     update,
-    remove,
     getPredecessorByCodigo,
     getSuccessorsByCodigo,
     countByFilter,

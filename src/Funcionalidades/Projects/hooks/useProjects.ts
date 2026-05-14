@@ -1,19 +1,20 @@
 import * as React from "react";
-import type { ProyectosServices } from "../../../services/Projets.service";
 import { useProjectActions } from "./useProjectActions";
 import { useProjectForm } from "./useProjectForm";
 import { useProjectsList } from "./useProjectsList";
+import { useRepositories } from "../../../repositories/repositoriesContext";
 
 /**
  * Fachada principal del dominio de proyectos.
  * @param proyectosSvc - Servicio de acceso a datos de proyectos.
  * @returns Estado consolidado, formulario, acciones y recarga de proyectos.
  */
-export function useProjects(proyectosSvc: ProyectosServices) {
+export function useProjects() {
+  const repositories = useRepositories()
   const [search, setSearch] = React.useState("");
-  const list = useProjectsList(proyectosSvc);
+  const list = useProjectsList(repositories.projects!);
   const form = useProjectForm();
-  const actions = useProjectActions(proyectosSvc);
+  const actions = useProjectActions(repositories.projects!);
 
   React.useEffect(() => {
     void list.loadAll();

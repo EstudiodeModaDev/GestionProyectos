@@ -1,6 +1,5 @@
 import React from "react";
 import "./Desviacion.css";
-import { useGraphServices } from "../../graph/graphContext";
 import { useTasks } from "../../Funcionalidades/ProjectTasksHooks/useProjectTasks";
 import type { DesviacionProps } from "./types";
 import { ColumnFilterModal } from "./components/ColumnFilterModal";
@@ -8,8 +7,9 @@ import { FeedbackMessages } from "./components/FeedbackMessages";
 import { MetricsGrid } from "./components/MetricsGrid";
 import { TasksTable } from "./components/TasksTable";
 import { useDesviacionMetrics } from "../../Funcionalidades/Metrics/hooks/useDesviacionMetrics";
-import { useTaskResponsables } from "../../Funcionalidades/Metrics/hooks/useTaskResponsables";
+import { useTaskResponsables } from "../../Funcionalidades/taskResponsible/useTaskResponsables";
 import type { TaskColumnFilterKey, TaskColumnFilters } from "./types";
+import { useRepositories } from "../../repositories/repositoriesContext";
 
 const DEFAULT_FILTERS: TaskColumnFilters = {
   tarea: "all",
@@ -25,21 +25,21 @@ const DEFAULT_FILTERS: TaskColumnFilters = {
  * @returns Vista con KPIs, filtros por columna y detalle de tareas.
  */
 const Desviacion: React.FC<DesviacionProps> = ({ project, }) => {
-  const graph = useGraphServices();
-  const { tasks: projectTasksList, loadAllProjectTasks, loading, error, } = useTasks(graph.tasks);
+  const repositories = useRepositories()
+  const { tasks: projectTasksList, loadAllProjectTasks, loading, error, } = useTasks(repositories.projectTasks!);
   const [filters, setFilters] = React.useState<TaskColumnFilters>(DEFAULT_FILTERS);
   const [activeColumn, setActiveColumn] = React.useState<TaskColumnFilterKey | null>(null);
 
   React.useEffect(() => {
-    if (!project.Id) return;
-    void loadAllProjectTasks(project.Id);
+    if (!project.id) return;
+    void loadAllProjectTasks(project.id);
     setFilters(DEFAULT_FILTERS);
-  }, [project.Id]);
+  }, [project.id]);
 
   const taskIds = React.useMemo(
     () =>
       projectTasksList
-        .map((task) => String(task.Id ?? "").trim())
+        .map((task) => String(task.id ?? "").trim())
         .filter(Boolean),
     [projectTasksList]
   );
@@ -69,7 +69,7 @@ const Desviacion: React.FC<DesviacionProps> = ({ project, }) => {
         <div className="desv__hero-main">
           <div>
             <p className="desv__eyebrow">Panel de desvio</p>
-            <h1 className="desv__title">Ver solicitud {project.Title}</h1>
+            <h1 className="desv__title">Ver solicitud {project.nombre_proyecto}</h1>
           </div>
         </div>
 

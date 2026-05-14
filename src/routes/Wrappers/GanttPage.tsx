@@ -1,8 +1,9 @@
 import * as React from "react";
 import { useParams, Navigate } from "react-router-dom";
-import { useGraphServices } from "../../graph/graphContext";
 import type { ProjectSP } from "../../models/Projects";
 import { GanttView } from "../../Components/GanttView/GanttView";
+import { createVoidProject } from "../../Funcionalidades/commons/project";
+import { useRepositories } from "../../repositories/repositoriesContext";
 
 type Props = {
   setSelectedProject: (p: ProjectSP) => void;
@@ -16,7 +17,7 @@ type Props = {
  */
 export function GanttPage({ setSelectedProject, project }: Props) {
   const { projectId } = useParams();
-  const { proyectos } = useGraphServices();
+  const repositories = useRepositories()
 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -31,7 +32,14 @@ export function GanttPage({ setSelectedProject, project }: Props) {
       setError(null);
 
       try {
-        const found = await proyectos.get(projectId);
+        let found: ProjectSP | null = createVoidProject()
+        const candidates = await repositories.projects?.loadProjects({id: projectId});
+
+        if(candidates && candidates?.length > 0){
+          found = candidates[0]
+        }
+
+
         if (!cancelled) setSelectedProject(found);
       } catch (e: any) {
         if (!cancelled) setError(e?.message ?? "Error cargando proyecto");
@@ -43,7 +51,7 @@ export function GanttPage({ setSelectedProject, project }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [projectId, proyectos]);
+  }, [projectId,]);
 
   if (!projectId) return <Navigate to="/dashboard" replace />;
   if (loading) return <p>Cargando proyecto...</p>;

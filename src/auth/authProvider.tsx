@@ -1,85 +1,99 @@
-import * as React from 'react';
-import type { AccountInfo } from '@azure/msal-browser';
-import {initMSAL, ensureActiveAccount, isLoggedIn, getAccessToken, ensureLogin, logout,} from './msal';
+import * as React from "react";
+import type { AccountInfo } from "@azure/msal-browser";
+import {
+  ensureActiveAccount,
+  ensureLogin,
+  getApiAccessToken,
+  getGraphAccessToken,
+  initMSAL,
+  isLoggedIn,
+  logout,
+} from "./msal";
 
 type AuthCtx = {
   ready: boolean;
   account: AccountInfo | null;
-  getToken: () => Promise<string>;     // NO fuerza login; falla si no hay sesión
-  signIn: (mode?: 'popup' | 'redirect') => Promise<void>;
+  getToken: () => Promise<string>;
+  getGraphToken: () => Promise<string>;
+  getApiToken: () => Promise<string>;
+  signIn: (mode?: "popup" | "redirect") => Promise<void>;
   signOut: () => Promise<void>;
 };
 
 const Ctx = React.createContext<AuthCtx | null>(null);
 
-/**
- * Renderiza el componente AuthProvider.
- * @returns Resultado de la operacion.
- */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [ready, setReady] = React.useState(false);
   const [account, setAccount] = React.useState<AccountInfo | null>(null);
 
-  // Inicializa MSAL y rehidrata sesión si existe
   React.useEffect(() => {
     let cancel = false;
+
     (async () => {
       try {
-        await initMSAL();                              // procesa handleRedirectPromise
-        const acc = ensureActiveAccount();             // toma active o primera cuenta
+        await initMSAL();
+        const activeAccount = ensureActiveAccount();
         if (!cancel) {
-          setAccount(acc ?? null);
+          setAccount(activeAccount ?? null);
           setReady(true);
         }
-        console.log('[AuthProvider] MSAL initialized');
-      } catch (err) {
-        console.error('[AuthProvider] init error:', err);
+      } catch (error) {
+        console.error("[AuthProvider] init error:", error);
         if (!cancel) setReady(true);
       }
     })();
-    return () => { cancel = true; };
+
+    return () => {
+      cancel = true;
+    };
   }, []);
 
-  // Login explícito (por defecto, POPUP para evitar loops de redirect)
-  const signIn = React.useCallback(async (mode: 'popup' | 'redirect' = 'popup') => {
-    const acc = await ensureLogin(mode);
-    setAccount(acc);
+  const signIn = React.useCallback(async (mode: "popup" | "redirect" = "popup") => {
+    const activeAccount = await ensureLogin(mode);
+    setAccount(activeAccount);
     setReady(true);
   }, []);
 
-  // Logout
   const signOut = React.useCallback(async () => {
     await logout();
     setAccount(null);
     setReady(true);
   }, []);
 
-  // Obtener token SIN forzar interacción (si no hay sesión, lanza error)
-  const getToken = React.useCallback(async () => {
+  const ensureSession = React.useCallback(() => {
     if (!isLoggedIn()) {
-      // evita iniciar interacción desde aquí; deja que UI llame signIn()
-      throw new Error('No hay sesión iniciada. Inicia sesión para continuar.');
+      throw new Error("No hay sesion iniciada. Inicia sesion para continuar.");
     }
-    return getAccessToken({ interactionMode: 'popup', forceSilent: false });
   }, []);
 
-  const value = React.useMemo<AuthCtx>(() => ({
-    ready,
-    account,
-    getToken,
-    signIn,
-    signOut,
-  }), [ready, account, getToken, signIn, signOut]);
+  const getGraphToken = React.useCallback(async () => {
+    ensureSession();
+    return getGraphAccessToken({ interactionMode: "popup", forceSilent: false });
+  }, [ensureSession]);
+
+  const getApiToken = React.useCallback(async () => {
+    ensureSession();
+    return getApiAccessToken({ interactionMode: "popup", forceSilent: false });
+  }, [ensureSession]);
+
+  const value = React.useMemo<AuthCtx>(
+    () => ({
+      ready,
+      account,
+      getToken: getGraphToken,
+      getGraphToken,
+      getApiToken,
+      signIn,
+      signOut,
+    }),
+    [ready, account, getGraphToken, getApiToken, signIn, signOut]
+  );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };
 
-/**
- * Expone el estado y las acciones relacionadas con auth.
- * @returns Resultado de la operacion.
- */
 export function useAuth(): AuthCtx {
   const ctx = React.useContext(Ctx);
-  if (!ctx) throw new Error('useAuth must be used within <AuthProvider>');
+  if (!ctx) throw new Error("useAuth must be used within <AuthProvider>");
   return ctx;
 }

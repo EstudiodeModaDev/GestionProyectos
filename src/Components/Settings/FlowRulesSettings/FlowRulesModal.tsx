@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { TemplateTasks } from "../../../models/AperturaTienda";
 import type { plantillaInsumos, ReglasFlujoTareas } from "../../../models/Insumos";
+import { ConfirmActionModal } from "../../confirmationModal/ConfirmActionModal";
 import { DetailFlowRule } from "./DetailFlowRule";
 import "../Settings.css"
 
@@ -38,6 +39,7 @@ export function FlowRulesModal({
 }: Props) {
   const [detailOpen, setDetailOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<ReglasFlujoTareas | null>(null);
+  const [ruleToDelete, setRuleToDelete] = React.useState<ReglasFlujoTareas | null>(null);
 
   React.useEffect(() => {
     if (!open) {
@@ -48,7 +50,7 @@ export function FlowRulesModal({
 
   if (!open) return null;
 
-  const insumosFlujo = insumos.filter((i) => !!i.PreguntaFlujo);
+  const insumosFlujo = insumos.filter((i) => !!i.pregunta_flujo);
 
   
 
@@ -58,8 +60,8 @@ export function FlowRulesModal({
    * @param codigo - Codigo de tarea a resolver.
    * @returns Tarea encontrada o `undefined`.
    */
-  const getTaskName = (codigo?: string) =>
-    tareas.find((t) => String(t.Codigo) === String(codigo));
+  const getTaskName = (codigo?: number) =>
+    tareas.find((t) => String(t.id) === String(codigo));
 
   
 
@@ -69,8 +71,8 @@ export function FlowRulesModal({
    * @param id - Identificador del insumo.
    * @returns Insumo encontrado o `undefined`.
    */
-  const getInsumoName = (id?: string) =>
-    insumosFlujo.find((i) => String(i.Id) === String(id));
+  const getInsumoName = (id?: number) =>
+    insumosFlujo.find((i) => String(i.id) === String(id));
 
   
 
@@ -102,10 +104,8 @@ export function FlowRulesModal({
    * @param rule - Regla a eliminar.
    */
   const handleDelete = async (rule: ReglasFlujoTareas) => {
-    if (!rule.Id) return;
-    const ok = window.confirm(`¿Eliminar la regla ${rule.Title}?`);
-    if (!ok) return;
-    await onDeleteRule(rule.Id);
+    if (!rule.id) return;
+    setRuleToDelete(rule);
   };
 
   return (
@@ -150,25 +150,25 @@ export function FlowRulesModal({
                 </thead>
                 <tbody>
                   {reglas.map((r) => {
-                    const tareaOrigen = getTaskName(r.IdTemplateTaskOrigen);
-                    const pregunta = getInsumoName(r.IdPlantillaInsumo);
-                    const cumple = getTaskName(r.TareaSiCumple);
-                    const noCumple = getTaskName(r.TareaSiNoCumple);
+                    const tareaOrigen = getTaskName(r.id_template_task_origen ?? 0);
+                    const pregunta = getInsumoName(r.id_plantilla_insumo ?? 0);
+                    const cumple = getTaskName(r.tarea_si_cumple ?? 0);
+                    const noCumple = getTaskName(r.tarea_si_no_cumple ?? 0);
 
                     return (
-                      <tr key={r.Id}>
-                        <td>{tareaOrigen ? `${tareaOrigen.Codigo} - ${tareaOrigen.Title}` : r.IdTemplateTaskOrigen}</td>
-                        <td>{pregunta?.Title ?? r.IdPlantillaInsumo}</td>
-                        <td>{r.ValorEsperado}</td>
-                        <td>{cumple ? `${cumple.Codigo} - ${cumple.Title}` : r.TareaSiCumple}</td>
-                        <td>{noCumple ? `${noCumple.Codigo} - ${noCumple.Title}` : r.TareaSiNoCumple}</td>
+                      <tr key={r.id}>
+                        <td>{tareaOrigen ? `${tareaOrigen.codigo} - ${tareaOrigen.nombre_tarea}` : r.id_template_task_origen}</td>
+                        <td>{pregunta?.nombre_insumo ?? r.id_plantilla_insumo}</td>
+                        <td>{r.valor_esperado}</td>
+                        <td>{cumple ? `${cumple.codigo} - ${cumple.nombre_tarea}` : r.tarea_si_cumple}</td>
+                        <td>{noCumple ? `${noCumple.codigo} - ${noCumple.nombre_tarea}` : r.tarea_si_no_cumple}</td>
                         <td>
                           <div className="tp-actions-inline">
                             <button className="pl-btn pl-btn--ghost" onClick={() => handleEdit(r)}>
                               Editar
                             </button>
                             <button className="pl-btn pl-btn--danger" onClick={() => handleDelete(r)}>
-                              Eliminar
+                              {r.is_active ? "Desactivar" : "Activar"}
                             </button>
                           </div>
                         </td>
@@ -191,6 +191,17 @@ export function FlowRulesModal({
         onClose={() => setDetailOpen(false)}
         onCreateRule={onCreateRule}
         onEditRule={onEditRule}
+      />
+
+      <ConfirmActionModal
+        open={Boolean(ruleToDelete)}
+        text={ruleToDelete ? `¿Seguro que deseas ${ruleToDelete.is_active ? "desactivar" : "activar"} la regla ${ruleToDelete.nombre_regla}?` : ""}
+        onCancel={() => setRuleToDelete(null)}
+        onConfirm={async () => {
+          if (!ruleToDelete?.id) return;
+          await onDeleteRule(ruleToDelete.id);
+          setRuleToDelete(null);
+        }}
       />
     </>
   );

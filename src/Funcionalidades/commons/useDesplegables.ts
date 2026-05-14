@@ -1,7 +1,5 @@
 import * as React from "react";
-import type { MarcasService } from "../../services/Marcas.service";
-import type { desplegable, desplegablesOption } from "../../models/desplegables";
-import type { ZonasService } from "../../services/Zonas.service";
+import type {  desplegablesOption } from "../../models/desplegables";
 
 /**
  * Configuración base requerida por el hook genérico de desplegables.
@@ -154,70 +152,4 @@ export function useDesplegable<T>(config: DesplegableConfig<T>): UseDesplegableR
   };
 }
 
-/**
- * Hook especializado para gestionar el desplegable de marcas.
- * @param marcasSvc - Servicio de marcas.
- * @returns API del desplegable adaptada al dominio de marcas.
- */
-export function useMarcas(marcasSvc: MarcasService) {
-  const load = React.useCallback(async (search?: string) => {
-    const items = await marcasSvc.getAll();
-    if (!search) return items.items;
 
-    const term = search.toLowerCase();
-    return items.items.filter((e: desplegable) =>
-      (e.Title ?? "").toLowerCase().includes(term)
-    );
-  }, [marcasSvc]);
-
-  const addItem = React.useCallback((payload: desplegable) => marcasSvc.create(payload), [marcasSvc]);
-  const editItem = React.useCallback((payload: desplegable, id: string) => marcasSvc.update(id, payload), [marcasSvc]);
-  const deleteItem = React.useCallback((id: string | number) => marcasSvc.delete(String(id)), [marcasSvc]);
-
-  return useDesplegable<desplegable>({
-    load,
-    addItem,
-    editItem,
-    deleteItem,
-    getId: (e) => e.Id ?? e.Title,
-    getLabel: (e) => e.Title ?? "",
-    includeIdInLabel: false,
-    fallbackIfEmptyTitle: "(Sin nombre)",
-    idPrefix: "#",
-    getIsActive: (e) => e.IsActive ?? false
-  });
-}
-
-/**
- * Hook especializado para gestionar el desplegable de zonas.
- * @param marcasSvc - Servicio de zonas.
- * @returns API del desplegable adaptada al dominio de zonas.
- */
-export function useZonas(marcasSvc: ZonasService) {
-  const load = React.useCallback(async (search?: string) => {
-    const items = await marcasSvc.getAll();
-    if (!search) return items.items;
-
-    const term = search.toLowerCase();
-    return items.items.filter((e: desplegable) =>
-      (e.Title ?? "").toLowerCase().includes(term)
-    );
-  }, [marcasSvc]);
-
-  const addItem = React.useCallback((payload: desplegable) => marcasSvc.create(payload), [marcasSvc]);
-  const editItem = React.useCallback((payload: desplegable, id: string) => marcasSvc.update(id, payload), [marcasSvc]);
-  const deleteItem = React.useCallback((id: string | number) => marcasSvc.delete(String(id)), [marcasSvc]);
-
-  return useDesplegable<desplegable>({
-    load,
-    addItem,
-    editItem,
-    deleteItem,
-    getId: (e) => e.Id ?? e.Title,
-    getLabel: (e) => e.Title ?? "",
-    includeIdInLabel: false,
-    fallbackIfEmptyTitle: "(Sin nombre)",
-    idPrefix: "#",
-    getIsActive: (e) => e.IsActive ?? false
-  });
-}

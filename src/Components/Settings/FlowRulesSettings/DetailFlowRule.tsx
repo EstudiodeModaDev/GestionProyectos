@@ -2,6 +2,7 @@ import * as React from "react";
 import type { TemplateTasks } from "../../../models/AperturaTienda";
 import "../Settings.css"
 import type { plantillaInsumos, ReglasFlujoTareas } from "../../../models/Insumos";
+import { showError, showWarning } from "../../../utils/toast";
 
 type Props = {
   open: boolean;
@@ -15,15 +16,15 @@ type Props = {
 };
 
 const emptyRule: ReglasFlujoTareas = {
-  Title: "",
-  IdTemplateTaskOrigen: "",
-  IdPlantillaInsumo: "",
-  Condicion: "equals",
-  ValorEsperado: "",
-  TareaSiCumple: "",
-  TareaSiNoCumple: "",
-  Activa: "Si",
-  Prioridad: "1",
+  nombre_regla: "",
+  id_template_task_origen: null,
+  id_plantilla_insumo: null,
+  condicion: "equals",
+  valor_esperado: "",
+  tarea_si_cumple: null,
+  tarea_si_no_cumple: null,
+  is_active: true,
+  prioridad: 1,
 };
 
 /**
@@ -32,15 +33,7 @@ const emptyRule: ReglasFlujoTareas = {
  * @param props - Estado del modal, catalogos y callbacks de persistencia.
  * @returns Modal con el formulario detallado de una regla de flujo.
  */
-export function DetailFlowRule({
-  open,
-  tareas,
-  insumos,
-  rule,
-  onClose,
-  onCreateRule,
-  onEditRule,
-}: Props) {
+export function DetailFlowRule({open, tareas, insumos, rule, onClose, onCreateRule, onEditRule,}: Props) {
   const [state, setState] = React.useState<ReglasFlujoTareas>(emptyRule);
   const [saving, setSaving] = React.useState(false);
 
@@ -50,9 +43,9 @@ export function DetailFlowRule({
     if (rule) {
       setState({
         ...rule,
-        Condicion: rule.Condicion ?? "equals",
-        Activa: rule.Activa ?? "Si",
-        Prioridad: rule.Prioridad ?? "1",
+        condicion: rule.condicion ?? "equals",
+        is_active: rule.is_active ?? true,
+        prioridad: rule.prioridad ?? 1,
       });
     } else {
       setState(emptyRule);
@@ -77,50 +70,48 @@ export function DetailFlowRule({
   };
 
   const selectedQuestion = insumos.find(
-    (i) => String(i.Id) === String(state.IdPlantillaInsumo)
+    (i) => String(i.id) === String(state.id_plantilla_insumo)
   );
 
   let opciones: string[] = [];
   try {
-    opciones = JSON.parse(selectedQuestion?.OpcionesJson ?? "[]");
+    opciones = JSON.parse(selectedQuestion?.opciones_json ?? "[]");
     if (!Array.isArray(opciones)) opciones = [];
   } catch {
     opciones = [];
   }
 
-  
-
   /**
    * Valida el formulario y guarda la regla en modo creacion o edicion.
    */
   const handleSave = async () => {
-    if (!state.IdTemplateTaskOrigen) {
-      alert("Debes seleccionar la tarea origen.");
+    if (!state.id_template_task_origen) {
+      showWarning("Debes seleccionar la tarea origen.");
       return;
     }
 
-    if (!state.IdPlantillaInsumo) {
-      alert("Debes seleccionar la pregunta.");
+    if (!state.id_plantilla_insumo) {
+      showWarning("Debes seleccionar la pregunta.");
       return;
     }
 
-    if (!state.ValorEsperado?.trim()) {
-      alert("Debes definir el valor esperado.");
+    if (!state.valor_esperado?.trim()) {
+      showWarning("Debes definir el valor esperado.");
       return;
     }
 
-    if (!state.TareaSiCumple) {
-      alert("Debes seleccionar la tarea destino si cumple.");
+    if (!state.tarea_si_cumple) {
+      showWarning("Debes seleccionar la tarea destino si cumple.");
       return;
     }
 
-    if (!state.TareaSiNoCumple) {
-      alert("Debes seleccionar la tarea destino si no cumple.");
+    if (!state.tarea_si_no_cumple) {
+      showWarning("Debes seleccionar la tarea destino si no cumple.");
       return;
     }
 
-    if (state.TareaSiCumple === state.TareaSiNoCumple) {
-      alert("Los destinos no pueden ser iguales.");
+    if (state.tarea_si_cumple === state.tarea_si_no_cumple) {
+      showWarning("Los destinos no pueden ser iguales.");
       return;
     }
 
@@ -128,14 +119,14 @@ export function DetailFlowRule({
     try {
       const payload: ReglasFlujoTareas = {
         ...state,
-        Title: `${state.IdTemplateTaskOrigen}-${state.IdPlantillaInsumo}`,
-        Condicion: "equals",
-        Activa: "Si",
-        Prioridad: "1",
+        nombre_regla: `${state.id_template_task_origen}-${state.id_plantilla_insumo}`,
+        condicion: "equals",
+        is_active: true,
+        prioridad: 1,
       };
 
-      if (rule?.Id) {
-        await onEditRule(rule.Id, payload);
+      if (rule?.id) {
+        await onEditRule(rule.id, payload);
       } else {
         await onCreateRule(payload);
       }
@@ -143,7 +134,7 @@ export function DetailFlowRule({
       onClose();
     } catch (e) {
       console.error(e);
-      alert("No fue posible guardar la regla.");
+      showError("No fue posible guardar la regla.");
     } finally {
       setSaving(false);
     }
@@ -176,13 +167,13 @@ export function DetailFlowRule({
               <span className="tp-field__label">Tarea origen</span>
               <select
                 className="tp-field__input"
-                value={state.IdTemplateTaskOrigen ?? ""}
-                onChange={(e) => setField("IdTemplateTaskOrigen", e.target.value)}
+                value={state.id_template_task_origen ?? ""}
+                onChange={(e) => setField("id_template_task_origen", Number(e.target.value))}
               >
                 <option value="">Selecciona una tarea</option>
                 {tareas.map((t) => (
-                  <option key={t.Id ?? t.Codigo} value={t.Codigo}>
-                    {t.Codigo} - {t.Title}
+                  <option key={t.id ?? t.codigo} value={t.id}>
+                    {t.codigo} - {t.nombre_tarea}
                   </option>
                 ))}
               </select>
@@ -192,16 +183,16 @@ export function DetailFlowRule({
               <span className="tp-field__label">Pregunta de flujo</span>
               <select
                 className="tp-field__input"
-                value={state.IdPlantillaInsumo ?? ""}
+                value={state.id_plantilla_insumo ?? ""}
                 onChange={(e) => {
-                  setField("IdPlantillaInsumo", e.target.value);
-                  setField("ValorEsperado", "");
+                  setField("id_plantilla_insumo", Number(e.target.value));
+                  setField("valor_esperado", "");
                 }}
               >
                 <option value="">Selecciona una pregunta</option>
                 {insumos.map((i) => (
-                  <option key={i.Id} value={i.Id}>
-                    {i.Title}
+                  <option key={i.id} value={i.id}>
+                    {i.nombre_insumo}
                   </option>
                 ))}
               </select>
@@ -222,8 +213,8 @@ export function DetailFlowRule({
               {opciones.length > 0 ? (
                 <select
                   className="tp-field__input"
-                  value={state.ValorEsperado ?? ""}
-                  onChange={(e) => setField("ValorEsperado", e.target.value)}
+                  value={state.valor_esperado ?? ""}
+                  onChange={(e) => setField("valor_esperado", e.target.value)}
                 >
                   <option value="">Selecciona un valor</option>
                   {opciones.map((op) => (
@@ -235,8 +226,8 @@ export function DetailFlowRule({
               ) : (
                 <input
                   className="tp-field__input"
-                  value={state.ValorEsperado ?? ""}
-                  onChange={(e) => setField("ValorEsperado", e.target.value)}
+                  value={state.valor_esperado ?? ""}
+                  onChange={(e) => setField("valor_esperado", e.target.value)}
                   placeholder="Valor esperado"
                 />
               )}
@@ -246,13 +237,13 @@ export function DetailFlowRule({
               <span className="tp-field__label">Tarea destino si cumple</span>
               <select
                 className="tp-field__input"
-                value={state.TareaSiCumple ?? ""}
-                onChange={(e) => setField("TareaSiCumple", e.target.value)}
+                value={state.tarea_si_cumple ?? ""}
+                onChange={(e) => setField("tarea_si_cumple", Number(e.target.value))}
               >
                 <option value="">Selecciona una tarea</option>
                 {tareas.map((t) => (
-                  <option key={t.Id ?? t.Codigo} value={t.Codigo}>
-                    {t.Codigo} - {t.Title}
+                  <option key={t.id ?? t.codigo} value={t.id}>
+                    {t.codigo} - {t.nombre_tarea}
                   </option>
                 ))}
               </select>
@@ -262,13 +253,13 @@ export function DetailFlowRule({
               <span className="tp-field__label">Tarea destino si no cumple</span>
               <select
                 className="tp-field__input"
-                value={state.TareaSiNoCumple ?? ""}
-                onChange={(e) => setField("TareaSiNoCumple", e.target.value)}
+                value={state.tarea_si_no_cumple ?? ""}
+                onChange={(e) => setField("tarea_si_no_cumple", Number(e.target.value))}
               >
                 <option value="">Selecciona una tarea</option>
                 {tareas.map((t) => (
-                  <option key={t.Id ?? t.Codigo} value={t.Codigo}>
-                    {t.Codigo} - {t.Title}
+                  <option key={t.id ?? t.codigo} value={t.id}>
+                    {t.codigo} - {t.nombre_tarea}
                   </option>
                 ))}
               </select>

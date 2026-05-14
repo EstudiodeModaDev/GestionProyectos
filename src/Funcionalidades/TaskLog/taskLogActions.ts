@@ -1,5 +1,5 @@
-import type { useGraphServices } from "../../graph/graphContext";
 import type { LogTarea } from "../../models/LogTarea";
+import type { taskLogRepository } from "../../repositories/taskLogRepository/TaskLogRepository";
 import { toGraphDateTime } from "../../utils/Date";
 
 /**
@@ -13,18 +13,18 @@ import { toGraphDateTime } from "../../utils/Date";
 export async function createTaskLog(
   taskId: string,
   userName: string,
-  service: ReturnType<typeof useGraphServices>,
+  service: taskLogRepository,
   accion: string
 ): Promise<{ok: boolean, error: string | null}> {
   const today = new Date();
   const graphToday = toGraphDateTime(today) ?? "";
 
   try {
-    await service.logTarea.create({
-      FechaAccion: graphToday,
-      IdTarea: taskId,
-      RealizadoPor: userName,
-      Title: accion
+    await service.createLog({
+      fecha_accion: graphToday,
+      id_tarea: taskId,
+      realizado_por: userName,
+      accion,
     });
     return {
       ok: true,
@@ -43,15 +43,15 @@ export async function createTaskLog(
 /**
  * Carga el historial de acciones de una tarea.
  * @param taskId - Identificador de la tarea.
- * @param service - Servicios Graph disponibles en la aplicación.
+ * @param service - Servicios definidos en la interfaz taskLogRepository
  * @returns Logs asociados a la tarea y estado de error si aplica.
  */
 export async function loadTaskLog(
   taskId: string,
-  service: ReturnType<typeof useGraphServices>,
+  service: taskLogRepository,
 ): Promise<{data: LogTarea[], error: string | null}> {
   try {
-    const logs = (await service.logTarea.getAll({ filter: `fields/IdTarea eq ${taskId}` })).items;
+    const logs = (await service.loadTaskLogs({ id_tarea: taskId }));
     return {
       data: logs,
       error: null
