@@ -173,19 +173,20 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
     // Validar faltantes según tipo
     const faltantes = outputs.filter((s: any) => {
       const v = values[s.id];
-      if (!v) return true;
+      const yaSubido = s.estado === "Subido";
+      if (!v) return !yaSubido;
 
-      if (s.tipo === "Archivo") return v.kind !== "Archivo" || !v.file;
-      if (s.tipo === "Texto") return v.kind !== "Texto" || !v.text?.trim();
-      if (s.tipo === "Opcion") return v.kind !== "Opcion" || !v.approved;
+      if (s.tipo === "Archivo") return !yaSubido && (v.kind !== "Archivo" || !v.file);
+      if (s.tipo === "Texto") return !yaSubido && (v.kind !== "Texto" || !v.text?.trim());
+      if (s.tipo === "Opcion") return !yaSubido && (v.kind !== "Opcion" || !v.approved);
 
       // fallback seguro
-      return true;
+      return !yaSubido;
     });
 
     if (faltantes.length > 0) {
       showWarning("Debes completar estos entregables:\n\n" + faltantes.map((f: any) => `- ${f.title}`).join("\n"), { autoClose: 8000 });
-      return;
+      return false;
     }
 
     // Guardar cada entregable según tipo
@@ -208,7 +209,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
           await returnTask(task, "Una de las salidas suministradas por esta tarea no fue aprobada por una de las tareas dependientes.")
           setShowSalidaModal(false);
           onClose();
-          return
+          return true
         }
       }
     }
@@ -216,6 +217,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
     await onCompleteTask(task);
     setShowSalidaModal(false);
     onClose()
+    return true
   };
 
   

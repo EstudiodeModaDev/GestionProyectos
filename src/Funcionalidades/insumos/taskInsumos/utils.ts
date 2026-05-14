@@ -16,6 +16,7 @@ export function buildTaskInsumoView(
     tipo: plantilla?.categoria || "Texto",
     texto,
     estado: texto || insumo.file_path ? "Subido" : "Pendiente",
+    fileName: insumo.file_name ?? undefined,
     fase,
   };
 }

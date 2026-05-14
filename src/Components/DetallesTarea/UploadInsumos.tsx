@@ -5,9 +5,14 @@ type SalidaItem = {
   title: string;
   tipo: string;
   texto?: string;
+  estado?: "Subido" | "Pendiente";
+  fileName?: string;
 };
 
-type SalidaValue =| { kind: "Archivo"; file: File | null } | { kind: "Texto"; text: string } | { kind: "Opcion"; approved: string };
+type SalidaValue =
+  | { kind: "Archivo"; file: File | null }
+  | { kind: "Texto"; text: string }
+  | { kind: "Opcion"; approved: string };
 
 export type SalidaValues = Record<string, SalidaValue>;
 
@@ -15,135 +20,169 @@ type SalidaModalProps = {
   open: boolean;
   salidas: SalidaItem[];
   onClose: () => void;
-  onSubmit: (values: SalidaValues) => void;
-  submitting?: boolean; // opcional: para deshabilitar botones mientras guardas
+  onSubmit: (values: SalidaValues) => Promise<boolean | void> | boolean | void;
+  submitting?: boolean;
 };
 
-/**
- * Crea el valor inicial para un entregable segun su tipo de captura.
- *
- * @param tipo - Tipo de insumo configurado.
- * @returns Estructura inicial compatible con el formulario del modal.
- */
-const defaultValueFor = (tipo: string): SalidaValue => {
-  if (tipo === "Archivo") return { kind: "Archivo", file: null };
-  if (tipo === "Texto") return { kind: "Texto", text: "" };
-  return { kind: "Opcion", approved: "" };
+const hasExistingValue = (item: SalidaItem): boolean => {
+  if (item.estado !== "Subido") return false;
+  if (item.tipo === "Archivo") return Boolean(item.fileName || item.texto);
+  return Boolean(item.texto?.trim());
 };
 
-/**
- * Solicita al usuario los entregables requeridos antes de cerrar una tarea.
- *
- * @param props - Propiedades del modal de salidas.
- * @returns Modal con controles dinamicos para archivos, texto u opciones.
- */
-export const SalidaModal: React.FC<SalidaModalProps> = ({open, salidas, onClose, onSubmit,}) => {
+const initialValueFor = (item: SalidaItem): SalidaValue => {
+  if (item.tipo === "Archivo") return { kind: "Archivo", file: null };
+  if (item.tipo === "Texto") return { kind: "Texto", text: item.texto ?? "" };
+  return { kind: "Opcion", approved: item.texto ?? "" };
+};
+
+export const SalidaModal: React.FC<SalidaModalProps> = ({ open, salidas, onClose, onSubmit }) => {
   const [values, setValues] = React.useState<SalidaValues>({});
-  const [submitting, setSubmiting] = React.useState<boolean>(false)
+  const [editableIds, setEditableIds] = React.useState<Record<string, boolean>>({});
+  const [submitting, setSubmitting] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     if (!open) return;
 
-    setValues((prev) => {
-      const next: SalidaValues = { ...prev };
-      for (const s of salidas) {
-        if (!next[s.id]) next[s.id] = defaultValueFor(s.tipo);
+    setValues(() => {
+      const next: SalidaValues = {};
+      for (const salida of salidas) {
+        next[salida.id] = initialValueFor(salida);
       }
-      // Si quieres limpiar los que ya no existen:
-      Object.keys(next).forEach((id) => {
-        if (!salidas.some((s) => s.id === id)) delete next[id];
-      });
+      return next;
+    });
+
+    setEditableIds(() => {
+      const next: Record<string, boolean> = {};
+      for (const salida of salidas) {
+        next[salida.id] = !hasExistingValue(salida);
+      }
       return next;
     });
   }, [open, salidas]);
 
   if (!open) return null;
 
-  
-
-  /**
-   * Actualiza el archivo seleccionado para un entregable.
-   *
-   * @param id - Identificador del insumo.
-   * @param file - Archivo adjunto por el usuario.
-   */
   const setFile = (id: string, file: File | null) => {
     setValues((s) => ({ ...s, [id]: { kind: "Archivo", file } }));
   };
 
-  
-
-  /**
-   * Actualiza el valor de texto asociado a un entregable.
-   *
-   * @param id - Identificador del insumo.
-   * @param text - Contenido textual capturado.
-   */
   const setText = (id: string, text: string) => {
     setValues((s) => ({ ...s, [id]: { kind: "Texto", text } }));
   };
 
-  
-
-  /**
-   * Actualiza la opcion elegida para un entregable de tipo aprobacion.
-   *
-   * @param id - Identificador del insumo.
-   * @param approved - Valor seleccionado por el usuario.
-   */
   const setApproved = (id: string, approved: string) => {
     setValues((s) => ({ ...s, [id]: { kind: "Opcion", approved } }));
   };
 
-  
-
-  /**
-   * Envia los valores capturados y cierra el modal al finalizar.
-   */
-  const handleSubmit = async () => {
-    setSubmiting(true)
-    await onSubmit(values)
-    onClose()
-    setSubmiting(false)
+  const enableEdit = (id: string) => {
+    setEditableIds((s) => ({ ...s, [id]: true }));
   };
 
-  
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    const shouldClose = await onSubmit(values);
+    if (shouldClose !== false) {
+      onClose();
+    }
+    setSubmitting(false);
+  };
 
-  /**
-   * Renderiza el control de entrada apropiado para cada entregable.
-   *
-   * @param s - Configuracion del insumo a capturar.
-   * @returns Control JSX adecuado al tipo configurado.
-   */
+  const renderChangeButton = (id: string) => (
+    <button
+      type="button"
+      className="salidas-change-btn"
+      onClick={() => enableEdit(id)}
+      disabled={submitting}
+    >
+      Cambiar
+    </button>
+  );
+
   const renderControl = (s: SalidaItem) => {
-    const v = values[s.id];
+    const value = values[s.id];
+    const alreadyUploaded = hasExistingValue(s);
+    const isEditable = editableIds[s.id] ?? !alreadyUploaded;
 
     if (s.tipo === "Archivo") {
-      const fileVal = v?.kind === "Archivo" ? v.file : null;
+      const fileVal = value?.kind === "Archivo" ? value.file : null;
       return (
-        <>
-          <input type="file" className="field__input" onChange={(e) => setFile(s.id, e.target.files?.[0] ?? null)} disabled={submitting}/>
-          {fileVal?.name ? (
-            <small className="salidas-hint">Seleccionado: {fileVal.name}</small>
+        <div className="salidas-control-stack">
+          {alreadyUploaded ? (
+            <div className="salidas-current">
+              <div className="salidas-current-copy">
+                <span className="salidas-current-label">Archivo actual</span>
+                <strong className="salidas-current-value">{s.fileName || s.texto || "Ya cargado"}</strong>
+              </div>
+              {!isEditable ? renderChangeButton(s.id) : null}
+            </div>
           ) : null}
-        </>
+          {!alreadyUploaded || isEditable ? (
+            <input
+              type="file"
+              className="field__input"
+              onChange={(e) => setFile(s.id, e.target.files?.[0] ?? null)}
+              disabled={submitting}
+            />
+          ) : null}
+          {fileVal?.name ? (
+            <small className="salidas-hint salidas-hint-strong">
+              {alreadyUploaded ? "Nuevo archivo para resubir" : "Seleccionado"}: {fileVal.name}
+            </small>
+          ) : null}
+        </div>
       );
     }
 
     if (s.tipo === "Texto") {
-      const textVal = v?.kind === "Texto" ? v.text : "";
+      const textVal = value?.kind === "Texto" ? value.text : "";
       return (
-        <textarea className="rrm-textarea" rows={2} placeholder="Escribe aquí..." value={textVal} onChange={(e) => setText(s.id, e.target.value)} disabled={submitting}/>
+        <div className="salidas-control-stack">
+          {alreadyUploaded ? (
+            <div className="salidas-current">
+              <div className="salidas-current-copy">
+                <span className="salidas-current-label">Valor actual</span>
+                <strong className="salidas-current-value">{s.texto || "Sin contenido"}</strong>
+              </div>
+              {!isEditable ? renderChangeButton(s.id) : null}
+            </div>
+          ) : null}
+          <textarea
+            className={`rrm-textarea ${!isEditable ? "salidas-control-disabled" : ""}`}
+            rows={2}
+            placeholder="Escribe aqui..."
+            value={textVal}
+            onChange={(e) => setText(s.id, e.target.value)}
+            disabled={submitting || !isEditable}
+          />
+        </div>
       );
     }
 
-    // Opcion
-    const approvedVal = v?.kind === "Opcion" ? v.approved : "";
+    const approvedVal = value?.kind === "Opcion" ? value.approved : "";
     return (
-      <select name="opcional" value={approvedVal} onChange={(e) => setApproved(s.id, e.target.value)} className="field__input">
-        <option value="Si">Aprobado</option>
-        <option value="No">No Aprobado</option>
-      </select>
+      <div className="salidas-control-stack">
+        {alreadyUploaded ? (
+          <div className="salidas-current">
+            <div className="salidas-current-copy">
+              <span className="salidas-current-label">Valor actual</span>
+              <strong className="salidas-current-value">{s.texto || "Sin seleccionar"}</strong>
+            </div>
+            {!isEditable ? renderChangeButton(s.id) : null}
+          </div>
+        ) : null}
+        <select
+          name="opcional"
+          value={approvedVal}
+          onChange={(e) => setApproved(s.id, e.target.value)}
+          className={`field__input ${!isEditable ? "salidas-control-disabled" : ""}`}
+          disabled={submitting || !isEditable}
+        >
+          <option value="">Selecciona una opcion</option>
+          <option value="Si">Aprobado</option>
+          <option value="No">No Aprobado</option>
+        </select>
+      </div>
     );
   };
 
@@ -161,8 +200,6 @@ export const SalidaModal: React.FC<SalidaModalProps> = ({open, salidas, onClose,
               <div className="salidas-head">
                 <strong className="salidas-title">{s.title}</strong>
               </div>
-
-              {s.texto ? <p className="salidas-desc">{s.texto}</p> : null}
 
               <div className="salidas-control">{renderControl(s)}</div>
             </li>

@@ -7,6 +7,7 @@ import {
   useTareaPlantillaInsumo,
   type TaskInsumoView,
 } from "../../Funcionalidades/insumos";
+import { useSupabaseApi } from "../../Funcionalidades/Supabase/useSupabaseApi";
 import { useTasks } from "../../Funcionalidades/ProjectTasksHooks/useProjectTasks";
 import { useProjects } from "../../Funcionalidades/Projects/useProjects";
 import { useTemplateTaks } from "../../Funcionalidades/TemplateTasks/useTemplateTasks";
@@ -30,6 +31,7 @@ import { applyProjectAutoFillInsumos } from "./autoFillProjectInsumos";
  * @returns Formulario de alta de proyecto y, cuando aplica, modal de entrega inicial.
  */
 export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, onClose }) => {
+  const supabaseApi = useSupabaseApi();
   const repositories = useRepositories();
   const { plantillaInsumos, projectTasks, projectInsumo } = repositories;
 
@@ -52,6 +54,8 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
   const [loading, setLoading] = React.useState(false);
   const [loadingMessage, setLoadingMessage] = React.useState("");
   const [fechaLanzamiento, setFechaLanzamiento] = React.useState("");
+  const [pendingProjectId, setPendingProjectId] = React.useState<string | null>(null);
+  const rollbackInProgressRef = React.useRef(false);
 
   React.useEffect(() => {
     if (!open) return;
@@ -69,9 +73,106 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
     setLoading(false);
     setLoadingMessage("");
     setFechaLanzamiento("");
+    setPendingProjectId(null);
     projectsController.resetForm();
     onClose();
   }, [onClose, projectsController]);
+
+  const rollbackPendingProjectCreation = React.useCallback(
+    async (reason: "close" | "missing_uploads" | "upload_error", projectIdOverride?: string | null) => {
+      const projectIdToDelete = projectIdOverride ?? pendingProjectId;
+      if (!projectIdToDelete || rollbackInProgressRef.current) {
+        return false;
+      }
+
+      rollbackInProgressRef.current = true;
+      setSubmittingUploads(true);
+      setLoading(true);
+      setLoadingMessage("Eliminando el proyecto incompleto...");
+
+      try {
+        const [tasks, insumos, relaciones] = await Promise.all([
+          repositories.projectTasks?.loadTasks({ id_proyecto: Number(projectIdToDelete) }) ?? Promise.resolve([]),
+          repositories.projectInsumo?.listInsumos({ id_proyecto: projectIdToDelete }) ?? Promise.resolve([]),
+          repositories.proyectoTareaInsumo?.loadRelation({ proyecto_id: Number(projectIdToDelete) }) ?? Promise.resolve([]),
+        ]);
+
+        const taskIds = tasks
+          .map((item) => Number(item.id ?? 0))
+          .filter((value) => Number.isFinite(value) && value > 0);
+
+        const responsables = taskIds.length > 0
+          ? (await repositories.projectTaskReponsible?.loadResponsible({ tarea_ids: taskIds })) ?? []
+          : [];
+
+        await Promise.all([
+          ...relaciones.map((item) =>
+            supabaseApi.call<void>("deleteResource", {
+              resource: "taskProjectInsumo",
+              id: String(item.id ?? ""),
+            })
+          ),
+          ...responsables.map((item) =>
+            supabaseApi.call<void>("deleteResource", {
+              resource: "projectTaskResponsible",
+              id: String(item.id ?? ""),
+            })
+          ),
+        ]);
+
+        await Promise.all([
+          ...insumos.map((item) =>
+            supabaseApi.call<void>("deleteResource", {
+              resource: "taskInsumos",
+              id: String(item.id ?? ""),
+            })
+          ),
+          ...tasks.map((item) =>
+            supabaseApi.call<void>("deleteResource", {
+              resource: "projectTasks",
+              id: String(item.id ?? ""),
+            })
+          ),
+        ]);
+
+        await supabaseApi.call<void>("deleteResource", {
+          resource: "projects",
+          id: projectIdToDelete,
+        });
+
+        closeAll();
+
+        const message =
+          reason === "close"
+            ? "Se canceló la creación del proyecto porque no se subieron los insumos de entrada de T1."
+            : "No se pudo completar la creación del proyecto porque no se subieron los insumos de entrada de T1.";
+
+        showWarning(message);
+        return true;
+      } catch (error: any) {
+        console.error("Error eliminando proyecto incompleto", error);
+        showError(
+          "No se pudo borrar el proyecto incompleto después de no subir los insumos de entrada de T1. " +
+            (error?.message ?? "")
+        );
+        return false;
+      } finally {
+        rollbackInProgressRef.current = false;
+        setSubmittingUploads(false);
+        setLoading(false);
+        setLoadingMessage("");
+      }
+    },
+    [
+      closeAll,
+      pendingProjectId,
+      repositories.projectInsumo,
+      repositories.projectTaskReponsible,
+      repositories.projectTasks,
+      repositories.proyectoTareaInsumo,
+      supabaseApi,
+    ]
+  );
 
   /**
    * Ejecuta el flujo de creacion del proyecto y sus dependencias operativas.
@@ -81,6 +182,7 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    let createdProjectId: string | null = null;
 
     const marca = projectsController.state.id_marca;
     if (!marca) {
@@ -95,6 +197,8 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
       if (!created?.id) throw new Error("No se pudo crear el proyecto");
 
       const projectId = created.id;
+      createdProjectId = projectId;
+      setPendingProjectId(projectId);
       const templateTasksArr = templateTasksCache.length > 0 ? templateTasksCache : await loadTemplateTasks();
 
       setLoadingMessage("Creando las tareas del proyecto...");
@@ -131,6 +235,7 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
           zonaId: String(projectsController.state.id_zona ?? "").trim(),
           marcas: marcas.marcas,
           zonas: zonas.zones,
+          nombre_tienda: String(projectsController.state.nombre_proyecto ?? "").trim(),
         },
       });
 
@@ -176,7 +281,12 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
       closeAll();
     } catch (err: any) {
       console.error(err);
-      setLoading(false);
+      if (createdProjectId) {
+        setPendingProjectId(createdProjectId);
+        await rollbackPendingProjectCreation("upload_error", createdProjectId);
+      } else {
+        setLoading(false);
+      }
       showError(err?.message ?? "Error creando el proyecto");
     }
   };
@@ -191,13 +301,18 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
 
       return toUpload.map((item: InsumoProyecto) => {
         const plantilla = plantillaMap.get(String(item.id_insumo ?? ""));
+        const tipo = String(plantilla?.categoria ?? "Archivo");
+        const yaSubido = tipo === "Archivo"
+          ? Boolean(item.file_path || item.file_name)
+          : Boolean(item.texto);
 
         return {
           id: String(item.id ?? ""),
           title: String(plantilla?.nombre_insumo ?? `Entregable ${item.id_insumo ?? ""}`),
-          tipo: String(plantilla?.categoria ?? "Archivo"),
+          tipo,
           texto: String(item.texto ?? ""),
-          estado: "Pendiente",
+          fileName: String(item.file_name ?? ""),
+          estado: yaSubido ? "Subido" : "Pendiente",
         };
       });
     },
@@ -214,12 +329,14 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
 
     const faltantes = uploadItems.filter((item) => {
       const value = values[item.id];
-      return !value || value.kind !== "Archivo" || !value.file;
+      const yaSubido = item.estado === "Subido";
+      return !yaSubido && (!value || value.kind !== "Archivo" || !value.file);
     });
 
     if (faltantes.length > 0) {
       showWarning("Debes adjuntar archivo para estos insumos:\n\n" + faltantes.map((item) => `- ${item.title}`).join("\n"));
-      return;
+      await rollbackPendingProjectCreation("missing_uploads");
+      return false;
     }
 
     setSubmittingUploads(true);
@@ -252,13 +369,17 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
 
       if (errors.length > 0) {
         showError("No se pudieron subir algunos insumos:\n\n" + errors.map((item) => `- ${item.title}: ${item.message}`).join("\n"));
-        return;
+        await rollbackPendingProjectCreation("upload_error");
+        return false;
       }
 
       closeAll();
+      return true;
     } catch (e: any) {
       console.error(e);
       showError(e?.message ?? "Error guardando insumos");
+      await rollbackPendingProjectCreation("upload_error");
+      return false;
     } finally {
       setSubmittingUploads(false);
     }
@@ -271,7 +392,9 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
       <SalidaModal
         open={uploadOpen}
         salidas={uploadItems}
-        onClose={() => setUploadOpen(false)}
+        onClose={() => {
+          void rollbackPendingProjectCreation("close");
+        }}
         onSubmit={handleSubmitUploads}
         submitting={submittingUploads}
       />
@@ -285,7 +408,16 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
       <div className="modal__backdrop" />
 
       <div className="modal__panel" role="dialog" aria-modal="true">
-        <NuevoProyectoModalHeader loading={loading} onClose={onClose} />
+        <NuevoProyectoModalHeader
+          loading={loading}
+          onClose={() => {
+            if (pendingProjectId) {
+              void rollbackPendingProjectCreation("close");
+              return;
+            }
+            onClose();
+          }}
+        />
 
         <form onSubmit={handleCreate} className="modal__form">
           <NuevoProyectoModalForm
@@ -309,7 +441,13 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
             loading={loading}
             loadingMessage={loadingMessage}
             disabled={isBusy}
-            onCancel={onClose}
+            onCancel={() => {
+              if (uploadOpen || pendingProjectId) {
+                void rollbackPendingProjectCreation("close");
+                return;
+              }
+              onClose();
+            }}
           />
         </form>
       </div>

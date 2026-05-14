@@ -4,6 +4,7 @@ export type TaskInsumoView = {
   tipo: string;
   texto: string;
   estado: "Subido" | "Pendiente";
+  fileName?: string;
   fase?: string;
 };
 

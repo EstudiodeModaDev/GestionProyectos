@@ -445,6 +445,78 @@
   color: #6b7280;
 }
 
+.salidas-hint-strong {
+  color: #1d4ed8;
+}
+
+.salidas-control {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.salidas-control-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.salidas-current {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+}
+
+.salidas-current-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.salidas-current-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.salidas-current-value {
+  font-size: 14px;
+  line-height: 1.45;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.salidas-change-btn {
+  border: 1px solid #bfdbfe;
+  background: #ffffff;
+  color: #1d4ed8;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.salidas-change-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.salidas-change-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 /* ============================= */
 /* Input file */
 /* ============================= */
@@ -479,6 +551,12 @@
   outline: none;
   border-color: #3b82f6;
   background: #ffffff;
+}
+
+.salidas-control-disabled {
+  background: #f8fafc !important;
+  color: #64748b !important;
+  border-color: #dbe3ee !important;
 }
 
 /* ============================= */
@@ -563,6 +641,10 @@
 
   .salidas-title {
     font-size: 13px;
+  }
+
+  .salidas-current {
+    flex-direction: column;
   }
 
   .btn {

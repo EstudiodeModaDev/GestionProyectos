@@ -5,12 +5,14 @@ export const PROJECT_AUTO_FILL_INSUMO_IDS = {
   fechaLanzamiento: "6",
   formatoTienda: "10",
   zona: "11",
+  nombreTienda: "26"
 } as const;
 
 type AutoFillContext = {
   fechaLanzamiento: string;
   marcaId: string;
   zonaId: string;
+  nombre_tienda: string
   marcas: marcas[];
   zonas: zonas[];
 };
@@ -38,6 +40,10 @@ const AUTO_FILL_RULES: AutoFillRule[] = [
       const zona = context.zonas.find((item) => String(item.id ?? "") === context.zonaId);
       return String(zona?.zonas ?? context.zonaId).trim();
     },
+  },
+  {
+    templateInsumoId: PROJECT_AUTO_FILL_INSUMO_IDS.nombreTienda,
+    resolveText: (context) =>  context.nombre_tienda.trim()
   },
 ];
 
