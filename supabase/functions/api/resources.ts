@@ -595,7 +595,7 @@ export const SETTINGS_RESOURCES: Record<string, CrudConfig> = {
     buildCreate: (payload) => {
       const data = {
         id_tarea: Number(payload.id_tarea) ?? null,
-        nombre_tarea: String(payload.nombre_tarea) ?? null,
+        accion: String(payload.accion) ?? null,
         fecha_accion: payload.fecha_accion ?? null,
       };
 
