@@ -441,6 +441,21 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
     }
   };
 
+  const onFechaSalidaChange = async (value: string) => {
+    if(!projectsController.state.fecha_inicio || projectsController.state.fecha_inicio === ""){
+      showWarning("Escoja primero una fecha de inicio");
+      return
+    }
+
+  if (value <= projectsController.state.fecha_inicio) {
+    showError("La fecha de salida no puede ser menor o igual a la fecha de inicio");
+    return;
+  }
+
+    setFechaLanzamiento(toSupabaseDate(new Date(value)))
+
+  };
+
   if (!open) return null;
 
   if (uploadOpen) {
@@ -490,7 +505,7 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
             onMarcaChange={(value) => projectsController.setField("id_marca", value)}
             onZonaChange={(value) => projectsController.setField("id_zona", value)}
             onFechaInicioChange={(value) => projectsController.setField("fecha_inicio", value)}
-            onFechaLanzamientoChange={(value) => setFechaLanzamiento(toSupabaseDate(new Date(value)))}
+            onFechaLanzamientoChange={(value) => onFechaSalidaChange(value)}
           />
 
           <NuevoProyectoModalFooter
