@@ -597,6 +597,7 @@ export const SETTINGS_RESOURCES: Record<string, CrudConfig> = {
         id_tarea: Number(payload.id_tarea) ?? null,
         accion: String(payload.accion) ?? null,
         fecha_accion: payload.fecha_accion ?? null,
+        realizado_por: payload.realizado_por ?? null,
       };
 
       return data;

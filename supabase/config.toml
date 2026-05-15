@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.upload-insumo]
 verify_jwt = false
+
+[functions.daily-task-reminders]
+verify_jwt = false
