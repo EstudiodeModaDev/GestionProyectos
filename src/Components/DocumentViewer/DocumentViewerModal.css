@@ -12,6 +12,7 @@
 .dvm-panel {
   width: min(1100px, 100%);
   height: min(88vh, 900px);
+  max-height: calc(100vh - 40px);
   background: #ffffff;
   border-radius: 20px;
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
@@ -81,19 +82,72 @@
   flex: 1;
   min-height: 0;
   background: #f8fafc;
+  overflow: hidden;
 }
 
 .dvm-viewer {
+  flex: 1;
+  display: flex;
   width: 100%;
   height: 100%;
+  min-height: 0;
 }
 
-.dvm-viewer #react-doc-viewer {
+.dvm-doc-viewer {
+  flex: 1;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.dvm-viewer #react-doc-viewer,
+.dvm-viewer .dvm-doc-viewer {
   height: 100%;
+  max-height: 100%;
 }
 
 .dvm-viewer .react-doc-viewer {
   height: 100%;
+  max-height: 100%;
+}
+
+.dvm-viewer #react-doc-viewer,
+.dvm-viewer .react-doc-viewer,
+.dvm-viewer #react-doc-viewer > div,
+.dvm-viewer #proxy-renderer,
+.dvm-viewer #msdoc-renderer {
+  min-height: 0;
+}
+
+.dvm-viewer #react-doc-viewer > div,
+.dvm-viewer #proxy-renderer,
+.dvm-viewer #msdoc-renderer {
+  height: 100%;
+}
+
+.dvm-viewer #react-doc-viewer #proxy-renderer {
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  overflow: auto;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.dvm-viewer #msdoc-iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  border: 0;
+}
+
+.dvm-viewer iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
 }
 
 .dvm-fallback {

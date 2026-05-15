@@ -15,6 +15,8 @@ import { showError, showWarning } from "../../utils/toast";
 import { DocumentViewerModal } from "../DocumentViewer/DocumentViewerModal";
 import { isPreviewSupported, triggerBrowserDownload } from "../DocumentViewer/documentViewerUtils";
 import type { Archivo } from "../../models/Files";
+import { InsumoTypeCard } from "./Components/insumoTypeCard";
+import { DependenciasCard } from "./Components/dependenciasCard";
 
 // ✅ Tipos nuevos del modal
 export type SalidaValue =
@@ -248,8 +250,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
     <>
       <div className="tdm-overlay">
         <div className="tdm-modal">
-          {/* Header */
-}
+          {/* Header */}
           <div className="tdm-header-row">
             <div className="tdm-header-main">
               <h3 className="tdm-title">
@@ -263,8 +264,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
           </div>
 
           <div className="tdm-grid">
-            {/* Columna izquierda */
-}
+            {/* Columna izquierda */}
             <div className="tdm-col-left">
               <div>
                 <p className="tdm-section-label">Responsables</p>
@@ -352,135 +352,41 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
                 : null}
             </div>
 
-            {/* Columna derecha */
-}
+            {/* Columna derecha */}
             <div className="tdm-col-right">
-              {/* Dependencia previa */
-}
-              <div className="tdm-card tdm-card-gray">
-                <div className="tdm-card-icon-bubble">
-                  <svg className="tdm-icon tdm-icon-gray" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
-                  </svg>
-                </div>
-                <div className="tdm-card-inner">
-                  <p className="tdm-section-label">Dependencia previa (predecesora)</p>
-                  {predecessor ? (
-                    <div className="tdm-predecessor-item" onClick={() => onGoToTask(predecessor)}>
-                      <p className="tdm-predecessor-title">
-                        {predecessor.nombre_tarea} ({predecessor.codigo})
-                      </p>
-                      <p className={ "tdm-predecessor-status " + (predecessor.Estado === "Completada" ? "tdm-predecessor-status-ok" : "tdm-predecessor-status-blocked")}>
-                        Estado: {predecessor.Estado}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="tdm-predecessor-empty">Sin dependencias previas.</p>
-                  )}
-                </div>
-              </div>
+              {/* Dependencia previa */}
+              <DependenciasCard 
+                tasks={predecessor ? [predecessor!] : []} 
+                title={"Dependencia previa (predecesora)"} 
+                onGoToTask={onGoToTask} 
+                noTasksMessage={"Sin dependencias previas."}
+              />
 
-              {/* Insumos entrada */
-}
-              <div className="tdm-card tdm-card-blue">
-                <div className="tdm-card-title-row">
-                  <svg className="tdm-icon tdm-icon-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                  </svg>
-                  <span className="tdm-card-title-text tdm-card-title-blue">
-                    Insumos (datos de entrada)
-                  </span>
-                </div>
+              {/* Insumos entrada */}
+              <InsumoTypeCard 
+              title={"Insumos (datos de entrada)"} 
+              style={"tdm-card-blue"} 
+              loading={loading} 
+              error={error} 
+              inputs={inputs} 
+              handleClickInsumo={handleClickInsumo}/>
 
-                {loading ? (
-                  <p className="tdm-card-body-text">Cargando insumos...</p>
-                ) : error ? (
-                  <p className="tdm-card-body-text tdm-error-text">
-                    Error al cargar insumos: {error}
-                  </p>
-                ) : inputs.length ? (
-                  <ul className="tdm-insumos-list">
-                    {inputs.map((ins: TaskInsumoView) => (
-                      <li key={ins.id} className="tdm-insumos-item" onClick={() => handleClickInsumo(ins)}>
-                        <span className="tdm-insumo-title">
-                          <strong>{ins.title}</strong> - {ins.texto ? ins.texto : "No subido"}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="tdm-card-body-text">
-                    No hay insumos configurados para esta tarea.
-                  </p>
-                )}
-              </div>
+              {/* Entregables salida */}
+              <InsumoTypeCard 
+              title={"Insumos (datos de salida)"} 
+              style={"tdm-card-green"} 
+              loading={loading} 
+              error={error} 
+              inputs={outputs} 
+              handleClickInsumo={handleClickInsumo}/>
 
-              {/* Entregables salida */
-}
-              <div className="tdm-card tdm-card-green">
-                <div className="tdm-card-title-row">
-                  <svg className="tdm-icon tdm-icon-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
-                  <span className="tdm-card-title-text tdm-card-title-green">
-                    Entregables (datos de salida)
-                  </span>
-                </div>
-
-                {loading ? (
-                  <p className="tdm-card-body-text">Cargando entregables...</p>
-                ) : error ? (
-                  <p className="tdm-card-body-text tdm-error-text">
-                    Error al cargar entregables: {error}
-                  </p>
-                ) : outputs.length ? (
-                  <ul className="tdm-insumos-list">
-                    {outputs.map((out: TaskInsumoView) => (
-                      <li key={out.id} className="tdm-insumos-item" onClick={() => handleClickInsumo(out)}>
-                        <span className="tdm-insumo-title">
-                          {out.title} - {out.texto ? out.texto : "No subido"}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="tdm-card-body-text">
-                    No hay entregables configurados para esta tarea.
-                  </p>
-                )}
-              </div>
-
-              {/* Impacto / tareas dependientes */
-}
-              <div className="tdm-card tdm-card-gray">
-                <div className="tdm-card-icon-bubble">
-                  <svg className="tdm-icon tdm-icon-gray" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
-                  </svg>
-                </div>
-                <div className="tdm-card-inner">
-                  <p className="tdm-section-label">Impacto (tareas dependientes)</p>
-                  {successors.length > 0 ? (
-                    <ul className="tdm-successors-list">
-                      {successors.map((succ) => {
-                        const st = succ.Estado;
-                        return (
-                          <li key={succ.id} className="tdm-successor-item" onClick={() => onGoToTask(succ)}>
-                            <p className="tdm-successor-title">
-                              {succ.nombre_tarea} ({succ.codigo})
-                            </p>
-                            <span className={ "tdm-successor-status " + (st !== "Finalizada" ? "tdm-successor-status-blocked" : "tdm-successor-status-ok")}>
-                              {st}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : (
-                    <p className="tdm-successors-empty">No bloquea otras tareas.</p>
-                  )}
-                </div>
-              </div>
+              {/* Impacto / tareas dependientes */}
+              <DependenciasCard 
+                tasks={successors ? successors : []} 
+                title={"Impacto (tareas dependientes)"} 
+                onGoToTask={onGoToTask} 
+                noTasksMessage={"Sin dependencias previas."}
+              />
             </div>
           </div>
 

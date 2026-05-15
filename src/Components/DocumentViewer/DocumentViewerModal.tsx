@@ -92,6 +92,8 @@ export function DocumentViewerModal({ open, file, onClose }: Props) {
         <div className="dvm-body">
           <div className="dvm-viewer">
             <DocViewer
+              className="dvm-doc-viewer"
+              style={{ height: "100%" }}
               documents={documents}
               pluginRenderers={DocViewerRenderers}
               config={{
