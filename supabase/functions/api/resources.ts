@@ -1,5 +1,12 @@
 import type { CrudConfig } from "./types.ts";
 
+function normalizeNullableDate(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  const normalized = String(value).trim();
+  if (!normalized || normalized.toLowerCase() === "null") return null;
+  return normalized;
+}
+
 export const SETTINGS_RESOURCES: Record<string, CrudConfig> = {
   insumos: {
     table: "insumos_plantilla",
@@ -409,11 +416,11 @@ export const SETTINGS_RESOURCES: Record<string, CrudConfig> = {
         id_tarea_plantilla: Number(payload.id_tarea_plantilla) ?? null,
         id_proyecto: Number(payload.id_proyecto) ?? null,
         estado: String(payload.estado ?? "").trim() ?? null,
-        fecha_cierre: payload.fecha_cierre ?? null,
-        fecha_resolucion:payload.fecha_resolucion ?? null,
+        fecha_cierre: normalizeNullableDate(payload.fecha_cierre),
+        fecha_resolucion: normalizeNullableDate(payload.fecha_resolucion),
         razon_devolucion: String(payload.razon_devolucion).trim() ?? null,
         razon_bloqueo: String(payload.razon_bloqueo ?? "").trim() ?? null,
-        fecha_inicio: payload.fecha_inicio ?? null,
+        fecha_inicio: normalizeNullableDate(payload.fecha_inicio),
       };
 
       return data;
@@ -421,10 +428,10 @@ export const SETTINGS_RESOURCES: Record<string, CrudConfig> = {
     buildUpdate: (payload) => {
       const patch: Record<string, unknown> = {};
     
-      if (payload.fecha_resolucion !== undefined) patch.fecha_resolucion = String(payload.fecha_resolucion).trim() ?? null;
+      if (payload.fecha_resolucion !== undefined) patch.fecha_resolucion = normalizeNullableDate(payload.fecha_resolucion);
       if (payload.estado !== undefined) patch.estado = String(payload.estado).trim() ?? null;
-      if (payload.fecha_cierre !== undefined) patch.fecha_cierre = String(payload.fecha_cierre).trim() ?? null;
-      if (payload.fecha_inicio !== undefined) patch.fecha_inicio = String(payload.fecha_inicio).trim() ?? null;
+      if (payload.fecha_cierre !== undefined) patch.fecha_cierre = normalizeNullableDate(payload.fecha_cierre);
+      if (payload.fecha_inicio !== undefined) patch.fecha_inicio = normalizeNullableDate(payload.fecha_inicio);
       if (payload.razon_devolucion !== undefined) patch.razon_devolucion = String(payload.razon_devolucion).trim() ?? null;
       if (payload.razon_bloqueo !== undefined) patch.razon_bloqueo = String(payload.razon_bloqueo).trim() ?? null;
 

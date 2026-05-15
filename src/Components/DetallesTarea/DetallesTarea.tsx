@@ -506,7 +506,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
                 </button>
 
                 { predecessor ? 
-                  <button type="button" className="tdm-btn tdm-btn-primary" onClick={() => {setDevolver(true)}} title={"Devolver antecesora"} disabled={disableComplete || task.Estado === "UserBlocked"}>
+                  <button type="button" className="tdm-btn tdm-btn-primary" onClick={() => {setDevolver(true)}} title={"ntecesora"} disabled={disableComplete || task.Estado === "UserBlocked"}>
                     Devolver antecesora
                   </button> : null
                 }
