@@ -1,21 +1,6 @@
 import type { NuevoProyectoFormProps } from "./NuevoProyectoModal.types";
 
-export function NuevoProyectoModalForm({
-  nombreProyecto,
-  marcaId,
-  zonaId,
-  fechaInicio,
-  fechaLanzamiento,
-  lider,
-  marcas,
-  zonas,
-  disabled,
-  onNombreProyectoChange,
-  onMarcaChange,
-  onZonaChange,
-  onFechaInicioChange,
-  onFechaLanzamientoChange,
-}: NuevoProyectoFormProps) {
+export function NuevoProyectoModalForm({nombreProyecto, marcaId, zonaId, fechaInicio, fechaLanzamiento, lider, marcas, zonas, disabled, onNombreProyectoChange, onMarcaChange, onZonaChange, onFechaInicioChange, onFechaLanzamientoChange,}: NuevoProyectoFormProps) {
   return (
     <>
       <div className="field">

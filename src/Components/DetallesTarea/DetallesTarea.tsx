@@ -17,7 +17,11 @@ import { isPreviewSupported, triggerBrowserDownload } from "../DocumentViewer/do
 import type { Archivo } from "../../models/Files";
 
 // ✅ Tipos nuevos del modal
-export type SalidaValue = { kind: "Archivo"; file: File | null } | { kind: "Texto"; text: string } | { kind: "Opcion"; approved: string };
+export type SalidaValue =
+  | { kind: "Archivo"; file: File | null }
+  | { kind: "Texto"; text: string }
+  | { kind: "Opcion"; approved: string }
+  | { kind: "Fecha"; date: string };
 
 export type SalidaValues = Record<string, SalidaValue>;
 
@@ -179,6 +183,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
       if (s.tipo === "Archivo") return !yaSubido && (v.kind !== "Archivo" || !v.file);
       if (s.tipo === "Texto") return !yaSubido && (v.kind !== "Texto" || !v.text?.trim());
       if (s.tipo === "Opcion") return !yaSubido && (v.kind !== "Opcion" || !v.approved);
+      if (s.tipo === "Fecha") return !yaSubido && (v.kind !== "Fecha" || !v.date);
 
       // fallback seguro
       return !yaSubido;
@@ -211,6 +216,10 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({blockTask, retu
           onClose();
           return true
         }
+      }
+
+      if (v.kind === "Fecha") {
+        await saveInsumoText(salida.id, v.date)
       }
     }
 

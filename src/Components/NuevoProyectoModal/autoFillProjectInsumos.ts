@@ -3,7 +3,7 @@ import type { InsumosProyectosRepository } from "../../repositories/insumosProye
 
 export const PROJECT_AUTO_FILL_INSUMO_IDS = {
   fechaLanzamiento: "6",
-  formatoTienda: "10",
+  formatoTienda: "17",
   zona: "11",
   nombreTienda: "26"
 } as const;

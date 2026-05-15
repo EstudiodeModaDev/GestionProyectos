@@ -1,12 +1,6 @@
 import React from "react";
 import "./NuevoProyectoModal.css";
-import {
-  useInsumosProyecto,
-  usePlantillaInsumos,
-  useTareaInsumoProyecto,
-  useTareaPlantillaInsumo,
-  type TaskInsumoView,
-} from "../../Funcionalidades/insumos";
+import {useInsumosProyecto, usePlantillaInsumos, useTareaInsumoProyecto, useTareaPlantillaInsumo, type TaskInsumoView,} from "../../Funcionalidades/insumos";
 import { useSupabaseApi } from "../../Funcionalidades/Supabase/useSupabaseApi";
 import { useTasks } from "../../Funcionalidades/ProjectTasksHooks/useProjectTasks";
 import { useProjects } from "../../Funcionalidades/Projects/useProjects";
@@ -31,6 +25,18 @@ import { applyProjectAutoFillInsumos } from "./autoFillProjectInsumos";
  * @returns Formulario de alta de proyecto y, cuando aplica, modal de entrega inicial.
  */
 export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, onClose }) => {
+  function parseInsumoOptions(raw: string | undefined): string[] {
+    if (!raw) return [];
+
+    return raw
+      .replace(/^\[/, "")
+      .replace(/\]$/, "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+
   const supabaseApi = useSupabaseApi();
   const repositories = useRepositories();
   const { plantillaInsumos, projectTasks, projectInsumo } = repositories;
@@ -42,7 +48,7 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
 
   const { insumos: plantillaInsumosCache, loadInsumosPlantilla } = usePlantillaInsumos(plantillaInsumos!);
   const { insumos: plantillaTareaCache, loadTareaInsumosPlantilla } = useTareaPlantillaInsumo();
-  const { createAllInsumosFromTemplate, saveInsumoFile } = useInsumosProyecto(projectInsumo!);
+  const { createAllInsumosFromTemplate, saveInsumoFile, saveInsumoText } = useInsumosProyecto(projectInsumo!);
   const { createAllInsumosTareaFromTemplate, getInsumosParaSubir } = useTareaInsumoProyecto(repositories.proyectoTareaInsumo!);
 
   const marcas = useMarcas();
@@ -55,6 +61,7 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
   const [loadingMessage, setLoadingMessage] = React.useState("");
   const [fechaLanzamiento, setFechaLanzamiento] = React.useState("");
   const [pendingProjectId, setPendingProjectId] = React.useState<string | null>(null);
+  const [uploadTemplateInsumos, setUploadTemplateInsumos] = React.useState<plantillaInsumos[]>([]);
   const rollbackInProgressRef = React.useRef(false);
 
   React.useEffect(() => {
@@ -74,6 +81,7 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
     setLoadingMessage("");
     setFechaLanzamiento("");
     setPendingProjectId(null);
+    setUploadTemplateInsumos([]);
     projectsController.resetForm();
     onClose();
   }, [onClose, projectsController]);
@@ -219,6 +227,7 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
         plantillaInsumosCache.length > 0 ? plantillaInsumosCache : await loadInsumosPlantilla("Apertura tienda");
       const plantillaTareaArr =
         plantillaTareaCache.length > 0 ? plantillaTareaCache : await loadTareaInsumosPlantilla("Apertura tienda");
+      setUploadTemplateInsumos(plantillaInsumosArr);
 
       const insumosCreated = await createAllInsumosFromTemplate(e, plantillaInsumosArr, projectId);
       if (!insumosCreated.ok || Object.keys(insumosCreated.data).length === 0) {
@@ -269,6 +278,8 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
         }
       }
 
+      console.log(insumosParaSubir)
+
       if (insumosParaSubir.length > 0) {
         setLoading(false);
         setLoadingMessage("");
@@ -293,18 +304,20 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
 
   const uploadItems: TaskInsumoView[] = React.useMemo(
     () => {
+      const insumosFuente = uploadTemplateInsumos.length > 0 ? uploadTemplateInsumos : plantillaInsumosCache;
       const plantillaMap = new Map(
-        plantillaInsumosCache
+        insumosFuente
           .filter((item: plantillaInsumos) => item.id)
-          .map((item: plantillaInsumos) => [String(item.id), item] as const)
+          .map((item: plantillaInsumos) => [String(item.id ?? "").trim(), item] as const)
       );
 
       return toUpload.map((item: InsumoProyecto) => {
-        const plantilla = plantillaMap.get(String(item.id_insumo ?? ""));
+        const plantilla = plantillaMap.get(String(item.id_insumo ?? "").trim());
         const tipo = String(plantilla?.categoria ?? "Archivo");
         const yaSubido = tipo === "Archivo"
           ? Boolean(item.file_path || item.file_name)
           : Boolean(item.texto);
+        console.log(plantilla?.opciones_json)
 
         return {
           id: String(item.id ?? ""),
@@ -313,11 +326,16 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
           texto: String(item.texto ?? ""),
           fileName: String(item.file_name ?? ""),
           estado: yaSubido ? "Subido" : "Pendiente",
+          options: parseInsumoOptions(plantilla?.opciones_json),
         };
       });
     },
-    [plantillaInsumosCache, toUpload]
+    [parseInsumoOptions, plantillaInsumosCache, toUpload, uploadTemplateInsumos]
   );
+
+  React.useEffect(() => {
+    console.log(uploadItems)
+  }, [open, uploadOpen]);
 
   /**
    * Sube los insumos iniciales requeridos despues de crear el proyecto.
@@ -330,11 +348,18 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
     const faltantes = uploadItems.filter((item) => {
       const value = values[item.id];
       const yaSubido = item.estado === "Subido";
-      return !yaSubido && (!value || value.kind !== "Archivo" || !value.file);
+      if (!value) return !yaSubido;
+
+      if (item.tipo === "Archivo") return !yaSubido && (value.kind !== "Archivo" || !value.file);
+      if (item.tipo === "Texto") return !yaSubido && (value.kind !== "Texto" || !value.text?.trim());
+      if (item.tipo === "Opcion") return !yaSubido && (value.kind !== "Opcion" || !value.approved);
+      if (item.tipo === "Fecha") return !yaSubido && (value.kind !== "Fecha" || !value.date);
+
+      return !yaSubido;
     });
 
     if (faltantes.length > 0) {
-      showWarning("Debes adjuntar archivo para estos insumos:\n\n" + faltantes.map((item) => `- ${item.title}`).join("\n"));
+      showWarning("Debes completar estos insumos:\n\n" + faltantes.map((item) => `- ${item.title}`).join("\n"));
       await rollbackPendingProjectCreation("missing_uploads");
       return false;
     }
@@ -342,18 +367,34 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
     setSubmittingUploads(true);
 
     try {
-      const items = uploadItems
+      const concurrency = 3;
+      const errors: { title: string; message: string }[] = [];
+
+      const fileItems = uploadItems
         .map((item) => {
           const value = values[item.id];
           return { s: item, file: value && value.kind === "Archivo" ? value.file : null };
         })
         .filter((item) => !!item.file) as { s: SalidaItem; file: File }[];
 
-      const concurrency = 3;
-      const errors: { title: string; message: string }[] = [];
+      const textItems = uploadItems
+        .map((item) => {
+          const value = values[item.id];
+          if (value?.kind === "Texto") {
+            return { s: item, text: value.text };
+          }
+          if (value?.kind === "Opcion") {
+            return { s: item, text: value.approved };
+          }
+          if (value?.kind === "Fecha") {
+            return { s: item, text: value.date };
+          }
+          return null;
+        })
+        .filter(Boolean) as { s: SalidaItem; text: string }[];
 
-      for (let i = 0; i < items.length; i += concurrency) {
-        const batch = items.slice(i, i + concurrency);
+      for (let i = 0; i < fileItems.length; i += concurrency) {
+        const batch = fileItems.slice(i, i + concurrency);
         const results = await Promise.allSettled(batch.map(({ s, file }) => saveInsumoFile(s.id, file)));
 
         results.forEach((result, idx) => {
@@ -367,6 +408,21 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
         });
       }
 
+      for (let i = 0; i < textItems.length; i += concurrency) {
+        const batch = textItems.slice(i, i + concurrency);
+        const results = await Promise.allSettled(batch.map(({ s, text }) => saveInsumoText(s.id, text)));
+
+        results.forEach((result, idx) => {
+          if (result.status === "rejected") {
+            const item = batch[idx].s;
+            errors.push({
+              title: item.title,
+              message: (result.reason as any)?.message ?? String(result.reason ?? "Error guardando valor"),
+            });
+          }
+        });
+      }
+
       if (errors.length > 0) {
         showError("No se pudieron subir algunos insumos:\n\n" + errors.map((item) => `- ${item.title}: ${item.message}`).join("\n"));
         await rollbackPendingProjectCreation("upload_error");
@@ -374,7 +430,7 @@ export const NuevoProyectoModal: React.FC<NuevoProyectoModalProps> = ({ open, on
       }
 
       closeAll();
-      return true;
+      return false;
     } catch (e: any) {
       console.error(e);
       showError(e?.message ?? "Error guardando insumos");

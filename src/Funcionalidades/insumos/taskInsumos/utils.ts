@@ -2,6 +2,24 @@ import type { InsumoProyecto, plantillaInsumos, tareaInsumoProyecto } from "../.
 import type { TaskInsumoView } from "../shared/types";
 import { getProjectInsumoId, getTemplateInsumoId } from "../shared/utils";
 
+function parseInsumoOptions(opcionesJson: string | undefined): string[] {
+  try {
+    const parsed = JSON.parse(opcionesJson ?? "[]");
+
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => String(item).trim()).filter(Boolean);
+    }
+
+    if (parsed && Array.isArray(parsed.options)) {
+      return parsed.options.map((item: unknown) => String(item).trim()).filter(Boolean);
+    }
+  } catch {
+    return [];
+  }
+
+  return [];
+}
+
 export function buildTaskInsumoView(
   link: tareaInsumoProyecto,
   insumo: InsumoProyecto,
@@ -18,5 +36,6 @@ export function buildTaskInsumoView(
     estado: texto || insumo.file_path ? "Subido" : "Pendiente",
     fileName: insumo.file_name ?? undefined,
     fase,
+    options: parseInsumoOptions(plantilla?.opciones_json),
   };
 }

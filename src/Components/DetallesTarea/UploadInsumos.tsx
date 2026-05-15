@@ -7,12 +7,14 @@ type SalidaItem = {
   texto?: string;
   estado?: "Subido" | "Pendiente";
   fileName?: string;
+  options?: string[];
 };
 
 type SalidaValue =
   | { kind: "Archivo"; file: File | null }
   | { kind: "Texto"; text: string }
-  | { kind: "Opcion"; approved: string };
+  | { kind: "Opcion"; approved: string }
+  | { kind: "Fecha"; date: string };
 
 export type SalidaValues = Record<string, SalidaValue>;
 
@@ -33,6 +35,7 @@ const hasExistingValue = (item: SalidaItem): boolean => {
 const initialValueFor = (item: SalidaItem): SalidaValue => {
   if (item.tipo === "Archivo") return { kind: "Archivo", file: null };
   if (item.tipo === "Texto") return { kind: "Texto", text: item.texto ?? "" };
+  if (item.tipo === "Fecha") return { kind: "Fecha", date: item.texto ?? "" };
   return { kind: "Opcion", approved: item.texto ?? "" };
 };
 
@@ -75,6 +78,10 @@ export const SalidaModal: React.FC<SalidaModalProps> = ({ open, salidas, onClose
     setValues((s) => ({ ...s, [id]: { kind: "Opcion", approved } }));
   };
 
+  const setDate = (id: string, date: string) => {
+    setValues((s) => ({ ...s, [id]: { kind: "Fecha", date } }));
+  };
+
   const enableEdit = (id: string) => {
     setEditableIds((s) => ({ ...s, [id]: true }));
   };
@@ -89,12 +96,7 @@ export const SalidaModal: React.FC<SalidaModalProps> = ({ open, salidas, onClose
   };
 
   const renderChangeButton = (id: string) => (
-    <button
-      type="button"
-      className="salidas-change-btn"
-      onClick={() => enableEdit(id)}
-      disabled={submitting}
-    >
+    <button type="button" className="salidas-change-btn" onClick={() => enableEdit(id)} disabled={submitting}>
       Cambiar
     </button>
   );
@@ -159,6 +161,30 @@ export const SalidaModal: React.FC<SalidaModalProps> = ({ open, salidas, onClose
       );
     }
 
+    if (s.tipo === "Fecha") {
+      const dateVal = value?.kind === "Fecha" ? value.date : "";
+      return (
+        <div className="salidas-control-stack">
+          {alreadyUploaded ? (
+            <div className="salidas-current">
+              <div className="salidas-current-copy">
+                <span className="salidas-current-label">Valor actual</span>
+                <strong className="salidas-current-value">{s.texto || "Sin fecha"}</strong>
+              </div>
+              {!isEditable ? renderChangeButton(s.id) : null}
+            </div>
+          ) : null}
+          <input
+            type="date"
+            className={`field__input ${!isEditable ? "salidas-control-disabled" : ""}`}
+            value={dateVal}
+            onChange={(e) => setDate(s.id, e.target.value)}
+            disabled={submitting || !isEditable}
+          />
+        </div>
+      );
+    }
+
     const approvedVal = value?.kind === "Opcion" ? value.approved : "";
     return (
       <div className="salidas-control-stack">
@@ -179,8 +205,11 @@ export const SalidaModal: React.FC<SalidaModalProps> = ({ open, salidas, onClose
           disabled={submitting || !isEditable}
         >
           <option value="">Selecciona una opcion</option>
-          <option value="Si">Aprobado</option>
-          <option value="No">No Aprobado</option>
+          {(s.options ?? []).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
         </select>
       </div>
     );
@@ -188,7 +217,7 @@ export const SalidaModal: React.FC<SalidaModalProps> = ({ open, salidas, onClose
 
   return (
     <div className="modal">
-      <div className="modal__backdrop" onClick={submitting ? undefined : onClose} />
+      <div className="modal__backdrop"/>
 
       <div className="modal__panel" role="dialog" aria-modal="true">
         <h2 className="modal__title">Completar entregables</h2>

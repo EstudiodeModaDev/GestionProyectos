@@ -10,6 +10,11 @@ export type FaseInsumo = "Entrada" | "Salida" | "Ambas";
 export type SalidaItem = {
   id: string;
   title: string;
+  tipo: string;
+  texto?: string;
+  estado?: "Subido" | "Pendiente";
+  fileName?: string;
+  options?: string[];
 };
 
 export type NuevoProyectoFormProps = {

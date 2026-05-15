@@ -35,14 +35,14 @@ export const InsumoDetailModal: React.FC<InsumoDetailModalProps> = ({open, plant
             setField("nombre_insumo", (insumo.nombre_insumo ?? "") as plantillaInsumos["nombre_insumo"]);
             setField("proceso", (insumo.proceso ?? accion) as plantillaInsumos["proceso"]);
             setField("is_active", (insumo.is_active ?? true) as plantillaInsumos["is_active"]);
+            setField("categoria", (insumo.categoria ?? "Archivo") as plantillaInsumos["categoria"]);
         } else {
             setField("id", undefined as any);
             setField("nombre_insumo", "" as plantillaInsumos["nombre_insumo"]);
             setField("proceso", accion as plantillaInsumos["proceso"]);
             setField("is_active", true as plantillaInsumos["is_active"]);
+            setField("categoria", "Archivo" as plantillaInsumos["categoria"]);
         }
-
-        setField("categoria", "Archivo" as plantillaInsumos["categoria"]);
     }, [open, insumo, accion]);
 
   if (!open) return null;
@@ -110,6 +110,7 @@ export const InsumoDetailModal: React.FC<InsumoDetailModalProps> = ({open, plant
                               <option value="Archivo">Archivo</option>
                               <option value="Texto">Texto</option>
                               <option value="Opcion">Opcion</option>
+                              <option value="Fecha">Fecha</option>
                             </select>
                         </label>
                     </div>

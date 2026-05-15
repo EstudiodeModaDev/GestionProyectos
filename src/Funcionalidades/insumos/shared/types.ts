@@ -6,6 +6,7 @@ export type TaskInsumoView = {
   estado: "Subido" | "Pendiente";
   fileName?: string;
   fase?: string;
+  options?: string[];
 };
 
 export type SalidaFiles = Record<string, File>;
